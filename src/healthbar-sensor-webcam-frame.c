@@ -22,6 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <obs.h>
 #include <util/platform.h>
 
+//#include <media-playback/media.h>
+
 
 struct healthbar_sensor_webcam_frame {
 	obs_source_t *context;

@@ -120,8 +120,8 @@ static obs_properties_t *hswf_properties(void *data)
 	obs_properties_t *props = obs_properties_create();
 
 	obs_properties_add_text(props, "text", "Texto a mostrar", OBS_TEXT_DEFAULT);
-	obs_properties_add_int(props, "width", "Ancho", 40, 200, 5);
-	obs_properties_add_int(props, "height", "Alto", 40, 200, 5);
+	obs_properties_add_int(props, "width", "Ancho", 400, 600, 5);
+	obs_properties_add_int(props, "height", "Alto", 400, 600, 5);
 
 	UNUSED_PARAMETER(data);
 	return props;
@@ -130,11 +130,14 @@ static obs_properties_t *hswf_properties(void *data)
 static void hswf_defaults(obs_data_t *settings)
 {
 	obs_data_set_default_string(settings, "text", "Str por defecto");
-	obs_data_set_default_int(settings, "width", 40);
-	obs_data_set_default_int(settings, "height", 40);
+	obs_data_set_default_int(settings, "width", 400);
+	obs_data_set_default_int(settings, "height", 400);
 }
 
 
+//.output_flags = OBS_SOURCE_ASYNC_VIDEO,
+//solo este flag hace que se crashee a veces
+//quizas es porque necesita los hotkey methods
 struct obs_source_info healthbar_sensor_webcam_frame = {
 	.id = "healthbar_sensor_webcam_frame",
 	.type = OBS_SOURCE_TYPE_INPUT,

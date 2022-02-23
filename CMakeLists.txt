@@ -13,6 +13,8 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(LibObs REQUIRED)
+find_package(FFmpeg REQUIRED
+	COMPONENTS avcodec avfilter avdevice avutil swscale avformat swresample)
 
 configure_file(
     src/plugin-macros.h.in
@@ -38,10 +40,17 @@ configure_file(
 
 set(PLUGIN_SOURCES
     src/plugin-main.c
-    src/healthbar-sensor-webcam-frame.c)
+    src/healthbar-sensor-webcam-frame.c
+    media-playback/decode.c
+    media-playback/media.c
+)
 
 set(PLUGIN_HEADERS
-    src/plugin-macros.generated.h)
+    src/plugin-macros.generated.h
+    media-playback/closest-format.h
+    media-playback/decode.h
+    media-playback/media.h
+)
 
 # --- Platform-independent build settings ---
 add_library(${CMAKE_PROJECT_NAME} MODULE ${PLUGIN_SOURCES} ${PLUGIN_HEADERS})
@@ -50,12 +59,14 @@ add_library(${CMAKE_PROJECT_NAME} MODULE ${PLUGIN_SOURCES} ${PLUGIN_HEADERS})
 
 include_directories(
     ${LIBOBS_INCLUDE_DIR}
+    ${FFMPEG_INCLUDE_DIRS}
     #${MEDIA_PLAYBACK_DIR}
 )
 #add_subdirectory(${MEDIA_PLAYBACK_DIR} "${CMAKE_CURRENT_BINARY_DIR}/media-playback")
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
     ${LIBOBS_LIB}
+    ${FFMPEG_LIBRARIES}
 )
 
 # --- End of section ---

@@ -29,8 +29,7 @@ struct healthbar_sensor_webcam_frame {
 	obs_source_t *context;
 
 	char *text;
-	int width;
-	int height;
+	int someNumber;
 };
 
 static const char *hswf_getname(void *unused)
@@ -44,14 +43,12 @@ static void hswf_update(void *data, obs_data_t *settings)
 	struct healthbar_sensor_webcam_frame *sensor = data;
 
 	const char *text = obs_data_get_string(settings, "text");
-	const int width = obs_data_get_int(settings, "width");
-	const int height = obs_data_get_int(settings, "height");
+	const int someNumber = obs_data_get_int(settings, "someNumber");
 
 	if (sensor->text)
 		bfree(sensor->text);
 	sensor->text = bstrdup(text);
-	sensor->width = width;
-	sensor->height = height;
+	sensor->someNumber = someNumber;
 }
 
 static void *hswf_create(obs_data_t *settings, obs_source_t *context)
@@ -74,13 +71,6 @@ static void hswf_destroy(void *data)
 	bfree(sensor);
 }
 
-static void hswf_render(void *data, gs_effect_t *effect)
-{
-	struct healthbar_sensor_webcam_frame *sensor = data;
-
-	UNUSED_PARAMETER(effect);
-}
-
 static void hswf_tick(void *data, float seconds)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
@@ -88,14 +78,12 @@ static void hswf_tick(void *data, float seconds)
 	UNUSED_PARAMETER(seconds);
 }
 
-static void hswf_show(void *data)
+static obs_missing_files_t *hswf_missingfiles(void *data)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
-}
 
-static void hswf_hide(void *data)
-{
-	struct healthbar_sensor_webcam_frame *sensor = data;
+	obs_missing_files_t *files = obs_missing_files_create();
+	return files;
 }
 
 static void hswf_activate(void *data)
@@ -103,16 +91,53 @@ static void hswf_activate(void *data)
 	struct healthbar_sensor_webcam_frame *sensor = data;
 }
 
-static uint32_t hswf_getwidth(void *data)
+static void hswf_deactivate(void *data)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
-	return sensor->width;
 }
 
-static uint32_t hswf_getheight(void *data)
+static void hswf_play_pause(void *data, bool pause)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
-	return sensor->height;
+}
+
+static void hswf_restart(void *data)
+{
+	struct healthbar_sensor_webcam_frame *sensor = data;
+}
+
+static void hswf_stop(void *data)
+{
+	struct healthbar_sensor_webcam_frame *sensor = data;
+}
+
+static int64_t hswf_get_duration(void *data)
+{
+	struct healthbar_sensor_webcam_frame *sensor = data;
+	int64_t dur = 0;
+
+	return dur;
+}
+
+static int64_t hswf_get_time(void *data)
+{
+	struct healthbar_sensor_webcam_frame *sensor = data;
+
+	//return mp_get_current_time(&s->media);
+	return 0;
+}
+
+static void hswf_set_time(void *data, int64_t ms)
+{
+	struct healthbar_sensor_webcam_frame *sensor = data;
+}
+
+static enum obs_media_state hswf_get_state(void *data)
+{
+	struct healthbar_sensor_webcam_frame *sensor = data;
+
+	//return sensor->state;
+	return OBS_MEDIA_STATE_ENDED;
 }
 
 static obs_properties_t *hswf_properties(void *data)
@@ -120,8 +145,7 @@ static obs_properties_t *hswf_properties(void *data)
 	obs_properties_t *props = obs_properties_create();
 
 	obs_properties_add_text(props, "text", "Texto a mostrar", OBS_TEXT_DEFAULT);
-	obs_properties_add_int(props, "width", "Ancho", 400, 600, 5);
-	obs_properties_add_int(props, "height", "Alto", 400, 600, 5);
+	obs_properties_add_int(props, "someNumber", "Número", 400, 600, 5);
 
 	UNUSED_PARAMETER(data);
 	return props;
@@ -130,8 +154,7 @@ static obs_properties_t *hswf_properties(void *data)
 static void hswf_defaults(obs_data_t *settings)
 {
 	obs_data_set_default_string(settings, "text", "Str por defecto");
-	obs_data_set_default_int(settings, "width", 400);
-	obs_data_set_default_int(settings, "height", 400);
+	obs_data_set_default_int(settings, "someNumber", 400);
 }
 
 
@@ -141,18 +164,24 @@ static void hswf_defaults(obs_data_t *settings)
 struct obs_source_info healthbar_sensor_webcam_frame = {
 	.id = "healthbar_sensor_webcam_frame",
 	.type = OBS_SOURCE_TYPE_INPUT,
-	.output_flags = OBS_SOURCE_VIDEO | OBS_SOURCE_SRGB,
+	.output_flags = OBS_SOURCE_ASYNC_VIDEO |
+			OBS_SOURCE_DO_NOT_DUPLICATE |
+			OBS_SOURCE_CONTROLLABLE_MEDIA,
 	.get_name = hswf_getname,
 	.update = hswf_update,
 	.create = hswf_create,
 	.destroy = hswf_destroy,
-	.video_render = hswf_render,
 	.video_tick = hswf_tick,
-	.show = hswf_show,
-	.hide = hswf_hide,
+	.missing_files = hswf_missingfiles,
 	.activate = hswf_activate,
-	.get_width = hswf_getwidth,
-	.get_height = hswf_getheight,
+	.deactivate = hswf_deactivate,
+	.media_play_pause = hswf_play_pause,
+	.media_restart = hswf_restart,
+	.media_stop = hswf_stop,
+	.media_get_duration = hswf_get_duration,
+	.media_get_time = hswf_get_time,
+	.media_set_time = hswf_set_time,
+	.media_get_state = hswf_get_state,
 	.get_properties = hswf_properties,
 	.get_defaults = hswf_defaults,
 	.icon_type = OBS_ICON_TYPE_UNKNOWN,

@@ -21,15 +21,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <obs-source.h>
 #include <obs.h>
 #include <util/platform.h>
-
-//#include <media-playback/media.h>
+#include <media-playback/media.h>
 
 
 struct healthbar_sensor_webcam_frame {
 	obs_source_t *context;
+	mp_media_t media;
+	bool media_valid;
 
+	char *input;
+	
 	char *text;
 	int someNumber;
+
+	enum obs_media_state state;
+	obs_hotkey_id hotkey;
+	obs_hotkey_pair_id play_pause_hotkey;
+	obs_hotkey_id stop_hotkey;
 };
 
 static const char *hswf_getname(void *unused)
@@ -38,27 +46,206 @@ static const char *hswf_getname(void *unused)
 	return obs_module_text("Healthbar Sensor Webcam Frame");
 }
 
+static void hswf_restart_hotkey(void *data, obs_hotkey_id id, obs_hotkey_t *hotkey,
+			   bool pressed)
+{
+	UNUSED_PARAMETER(id);
+	UNUSED_PARAMETER(hotkey);
+
+	if (!pressed)
+		return;
+
+	struct healthbar_sensor_webcam_frame *sensor = data;
+	if (obs_source_showing(sensor->context))
+		obs_source_media_restart(sensor->context);
+}
+
+static bool hswf_play_hotkey(void *data, obs_hotkey_pair_id id,
+				      obs_hotkey_t *hotkey, bool pressed)
+{
+	UNUSED_PARAMETER(id);
+	UNUSED_PARAMETER(hotkey);
+
+	if (!pressed)
+		return false;
+
+	struct healthbar_sensor_webcam_frame *sensor = data;
+
+	if (sensor->state == OBS_MEDIA_STATE_PLAYING ||
+	    !obs_source_showing(sensor->context))
+		return false;
+
+	obs_source_media_play_pause(sensor->context, false);
+	return true;
+}
+
+static bool hswf_pause_hotkey(void *data, obs_hotkey_pair_id id,
+				       obs_hotkey_t *hotkey, bool pressed)
+{
+	UNUSED_PARAMETER(id);
+	UNUSED_PARAMETER(hotkey);
+
+	if (!pressed)
+		return false;
+
+	struct healthbar_sensor_webcam_frame *sensor = data;
+
+	if (sensor->state != OBS_MEDIA_STATE_PLAYING ||
+	    !obs_source_showing(sensor->context))
+		return false;
+
+	obs_source_media_play_pause(sensor->context, true);
+	return true;
+}
+
+static void hswf_stop_hotkey(void *data, obs_hotkey_id id,
+				      obs_hotkey_t *hotkey, bool pressed)
+{
+	UNUSED_PARAMETER(id);
+	UNUSED_PARAMETER(hotkey);
+
+	if (!pressed)
+		return;
+
+	struct healthbar_sensor_webcam_frame *sensor = data;
+
+	if (obs_source_showing(sensor->context))
+		obs_source_media_stop(sensor->context);
+}
+
+static void get_frame(void *opaque, struct obs_source_frame *f)
+{
+	struct healthbar_sensor_webcam_frame *sensor = opaque;
+	obs_source_output_video(sensor->context, f);
+}
+
+static void preload_frame(void *opaque, struct obs_source_frame *f)
+{
+	struct healthbar_sensor_webcam_frame *sensor = opaque;
+	obs_source_preload_video(sensor->context, f);
+}
+
+static void seek_frame(void *opaque, struct obs_source_frame *f)
+{
+	struct healthbar_sensor_webcam_frame *sensor = opaque;
+	obs_source_set_video_frame(sensor->context, f);
+}
+
+static void get_audio(void *opaque, struct obs_source_audio *a)
+{
+	struct healthbar_sensor_webcam_frame *sensor = opaque;
+	obs_source_output_audio(sensor->context, a);
+}
+
+static void media_stopped(void *opaque)
+{
+	struct healthbar_sensor_webcam_frame *sensor = opaque;
+	obs_source_output_video(sensor->context, NULL);
+
+	sensor->state = OBS_MEDIA_STATE_ENDED;
+	obs_source_media_ended(sensor->context);
+}
+
+static void hswf_media_open(struct healthbar_sensor_webcam_frame *sensor)
+{
+	if (sensor->input && *sensor->input) {
+		struct mp_media_info info = {
+			.opaque = sensor,
+			.v_cb = get_frame,
+			.v_preload_cb = preload_frame,
+			.v_seek_cb = seek_frame,
+			.a_cb = get_audio,
+			.stop_cb = media_stopped,
+			.path = sensor->input,
+			.format = NULL,
+			.buffering = 2 * 1024 * 1024,
+			.speed = 100,
+			.force_range = VIDEO_RANGE_DEFAULT,
+			.is_linear_alpha = false,
+			.hardware_decoding = false,
+			.is_local_file = true,
+			.reconnecting = false,
+		};
+
+		sensor->media_valid = mp_media_init(&sensor->media, &info);
+	}
+}
+
+static void hswf_media_start(struct healthbar_sensor_webcam_frame *sensor)
+{
+	if (!sensor->media_valid)
+		hswf_media_open(sensor);
+
+	mp_media_play(&sensor->media, true, false);
+	obs_source_show_preloaded_video(sensor->context);
+	
+	sensor->state = OBS_MEDIA_STATE_PLAYING;
+	obs_source_media_started(sensor->context);
+}
+
 static void hswf_update(void *data, obs_data_t *settings)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
+	bfree(sensor->input);
+	char *input =
+		(char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm";
 
 	const char *text = obs_data_get_string(settings, "text");
 	const int someNumber = obs_data_get_int(settings, "someNumber");
 
+	sensor->input = input ? bstrdup(input) : NULL;
 	if (sensor->text)
 		bfree(sensor->text);
 	sensor->text = bstrdup(text);
 	sensor->someNumber = someNumber;
+
+	if (sensor->media_valid) {
+		mp_media_free(&sensor->media);
+		sensor->media_valid = false;
+	}
+
+	bool active = obs_source_active(sensor->context);
+	if(active) {
+		hswf_media_open(sensor);
+		hswf_media_start(sensor);
+	}
 }
 
 static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 {
+	UNUSED_PARAMETER(settings);
+
 	struct healthbar_sensor_webcam_frame *sensor =
 		bzalloc(sizeof(struct healthbar_sensor_webcam_frame));
-
 	sensor->context = context;
-	hswf_update(sensor, settings);
 
+	sensor->hotkey = obs_hotkey_register_source(
+		context,
+		"MediaSource.Restart",
+		obs_module_text("RestartMedia"),
+		hswf_restart_hotkey,
+		sensor
+	);
+	sensor->play_pause_hotkey = obs_hotkey_pair_register_source(
+		context,
+		"MediaSource.Play",
+		obs_module_text("Play"),
+		"MediaSource.Pause",
+		obs_module_text("Pause"),
+		hswf_play_hotkey,
+		hswf_pause_hotkey,
+		sensor,
+		sensor
+	);
+	sensor->stop_hotkey = obs_hotkey_register_source(
+		context,
+		"MediaSource.Stop",
+		obs_module_text("Stop"),
+		hswf_stop_hotkey,
+		sensor
+	);
+
+	hswf_update(sensor, settings);
 	return sensor;
 }
 
@@ -136,8 +323,7 @@ static enum obs_media_state hswf_get_state(void *data)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
 
-	//return sensor->state;
-	return OBS_MEDIA_STATE_ENDED;
+	return sensor->state;
 }
 
 static obs_properties_t *hswf_properties(void *data)

@@ -253,8 +253,16 @@ static void hswf_destroy(void *data)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
 
+	if (sensor->hotkey)
+		obs_hotkey_unregister(sensor->hotkey);
+
+	if (sensor->media_valid)
+		mp_media_free(&sensor->media);
+
 	if (sensor->text)
 		bfree(sensor->text);
+
+	bfree(sensor->input);
 	bfree(sensor);
 }
 
@@ -268,19 +276,29 @@ static void hswf_tick(void *data, float seconds)
 static obs_missing_files_t *hswf_missingfiles(void *data)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
-
 	obs_missing_files_t *files = obs_missing_files_create();
+
+	if (strcmp(sensor->input, "") != 0 && !os_file_exists(sensor->input)) {
+		blog(LOG_INFO, "HSWF - ERROR: missing media file");
+	}
+
 	return files;
 }
 
 static void hswf_activate(void *data)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
+	obs_source_media_restart(sensor->context);
 }
 
 static void hswf_deactivate(void *data)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
+
+	if (sensor->media_valid) {
+		mp_media_stop(&sensor->media);
+		obs_source_output_video(sensor->context, NULL);
+	}
 }
 
 static void hswf_play_pause(void *data, bool pause)

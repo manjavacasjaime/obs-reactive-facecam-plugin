@@ -304,22 +304,48 @@ static void hswf_deactivate(void *data)
 static void hswf_play_pause(void *data, bool pause)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
+
+	if (!sensor->media_valid)
+		hswf_media_open(sensor);
+
+	mp_media_play_pause(&sensor->media, pause);
+
+	if (pause) {
+		sensor->state = OBS_MEDIA_STATE_PAUSED;
+	} else {
+		sensor->state = OBS_MEDIA_STATE_PLAYING;
+		obs_source_media_started(sensor->context);
+	}
 }
 
 static void hswf_restart(void *data)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
+
+	if (obs_source_showing(sensor->context))
+		hswf_media_start(sensor);
+
+	sensor->state = OBS_MEDIA_STATE_PLAYING;
 }
 
 static void hswf_stop(void *data)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
+
+	if (sensor->media_valid) {
+		mp_media_stop(&sensor->media);
+		obs_source_output_video(sensor->context, NULL);
+		sensor->state = OBS_MEDIA_STATE_STOPPED;
+	}
 }
 
 static int64_t hswf_get_duration(void *data)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
 	int64_t dur = 0;
+
+	if (sensor->media.fmt)
+		dur = sensor->media.fmt->duration / INT64_C(1000);
 
 	return dur;
 }
@@ -328,13 +354,17 @@ static int64_t hswf_get_time(void *data)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
 
-	//return mp_get_current_time(&s->media);
-	return 0;
+	return mp_get_current_time(&sensor->media);
 }
 
 static void hswf_set_time(void *data, int64_t ms)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
+
+	if (!sensor->media_valid)
+		return;
+
+	mp_media_seek_to(&sensor->media, ms);
 }
 
 static enum obs_media_state hswf_get_state(void *data)

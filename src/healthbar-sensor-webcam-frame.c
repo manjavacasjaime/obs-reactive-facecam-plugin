@@ -23,6 +23,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <util/platform.h>
 #include <media-playback/media.h>
 
+#define GREENCAMFRAME  (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
+#define REDCAMFRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/RedMarco02.webm"
+
 
 struct healthbar_sensor_webcam_frame {
 	obs_source_t *context;
@@ -187,8 +190,7 @@ static void hswf_update(void *data, obs_data_t *settings)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
 	bfree(sensor->input);
-	char *input =
-		(char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm";
+	char *input = GREENCAMFRAME;
 
 	const char *text = obs_data_get_string(settings, "text");
 	const int someNumber = obs_data_get_int(settings, "someNumber");
@@ -391,16 +393,44 @@ static void hswf_defaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, "someNumber", 400);
 }
 
+static void hswf_mouse_click(void *data, const struct obs_mouse_event *event,
+				int32_t type, bool mouse_up, uint32_t click_count)
+{
+	struct healthbar_sensor_webcam_frame *sensor = data;
+	char *input = REDCAMFRAME;
+
+	if (sensor->media_valid) {
+		mp_media_free(&sensor->media);
+		sensor->media_valid = false;
+	}
+
+	bfree(sensor->input);
+	sensor->input = input ? bstrdup(input) : NULL;
+
+	bool active = obs_source_active(sensor->context);
+	if(active) {
+		hswf_media_open(sensor);
+		hswf_media_start(sensor);
+	}
+
+	UNUSED_PARAMETER(event);
+	UNUSED_PARAMETER(type);
+	UNUSED_PARAMETER(mouse_up);
+	UNUSED_PARAMETER(click_count);
+}
+
 
 //.output_flags = OBS_SOURCE_ASYNC_VIDEO,
 //solo este flag hace que se crashee a veces
 //quizas es porque necesita los hotkey methods
+//En cuanto quite el mouse_click, OBS_SOURCE_INTERACTION se va
 struct obs_source_info healthbar_sensor_webcam_frame = {
 	.id = "healthbar_sensor_webcam_frame",
 	.type = OBS_SOURCE_TYPE_INPUT,
 	.output_flags = OBS_SOURCE_ASYNC_VIDEO |
 			OBS_SOURCE_DO_NOT_DUPLICATE |
-			OBS_SOURCE_CONTROLLABLE_MEDIA,
+			OBS_SOURCE_CONTROLLABLE_MEDIA |
+			OBS_SOURCE_INTERACTION,
 	.get_name = hswf_getname,
 	.update = hswf_update,
 	.create = hswf_create,
@@ -419,4 +449,5 @@ struct obs_source_info healthbar_sensor_webcam_frame = {
 	.get_properties = hswf_properties,
 	.get_defaults = hswf_defaults,
 	.icon_type = OBS_ICON_TYPE_UNKNOWN,
+	.mouse_click = hswf_mouse_click,
 };

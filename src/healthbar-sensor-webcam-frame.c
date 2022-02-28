@@ -396,8 +396,17 @@ static void hswf_defaults(obs_data_t *settings)
 static void hswf_mouse_click(void *data, const struct obs_mouse_event *event,
 				int32_t type, bool mouse_up, uint32_t click_count)
 {
+	if (mouse_up)
+		return;
+
 	struct healthbar_sensor_webcam_frame *sensor = data;
-	char *input = REDCAMFRAME;
+	char *input;
+
+	if (strcmp(sensor->input, GREENCAMFRAME) == 0) {
+		input = REDCAMFRAME;
+	} else {
+		input = GREENCAMFRAME;
+	}
 
 	if (sensor->media_valid) {
 		mp_media_free(&sensor->media);
@@ -415,7 +424,6 @@ static void hswf_mouse_click(void *data, const struct obs_mouse_event *event,
 
 	UNUSED_PARAMETER(event);
 	UNUSED_PARAMETER(type);
-	UNUSED_PARAMETER(mouse_up);
 	UNUSED_PARAMETER(click_count);
 }
 

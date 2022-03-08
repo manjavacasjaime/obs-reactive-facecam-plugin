@@ -60,6 +60,7 @@ add_library(${CMAKE_PROJECT_NAME} MODULE ${PLUGIN_SOURCES} ${PLUGIN_HEADERS})
 include_directories(
     ${LIBOBS_INCLUDE_DIR}
     ${FFMPEG_INCLUDE_DIRS}
+    "${LIBOBS_INCLUDE_DIR}/../UI/obs-frontend-api"
     #${MEDIA_PLAYBACK_DIR}
 )
 #add_subdirectory(${MEDIA_PLAYBACK_DIR} "${CMAKE_CURRENT_BINARY_DIR}/media-playback")
@@ -67,6 +68,7 @@ include_directories(
 target_link_libraries(${CMAKE_PROJECT_NAME}
     ${LIBOBS_LIB}
     ${FFMPEG_LIBRARIES}
+    ${OBS_FRONTEND_LIB}
 )
 
 # --- End of section ---

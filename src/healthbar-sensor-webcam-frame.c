@@ -38,6 +38,8 @@ struct healthbar_sensor_webcam_frame {
 	char *text;
 	int someNumber;
 
+	obs_source_t *currentScene;
+
 	enum obs_media_state state;
 	obs_hotkey_id hotkey;
 	obs_hotkey_pair_id play_pause_hotkey;
@@ -221,6 +223,11 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	struct healthbar_sensor_webcam_frame *sensor =
 		bzalloc(sizeof(struct healthbar_sensor_webcam_frame));
 	sensor->context = context;
+
+	obs_source_t *currentScene = obs_frontend_get_current_scene();
+	sensor->currentScene = currentScene;
+
+	obs_frontend_take_source_screenshot(currentScene);
 
 	sensor->hotkey = obs_hotkey_register_source(
 		context,

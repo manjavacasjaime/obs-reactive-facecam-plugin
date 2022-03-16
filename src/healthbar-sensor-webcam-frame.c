@@ -39,6 +39,7 @@ struct healthbar_sensor_webcam_frame {
 	int someNumber;
 
 	obs_source_t *currentScene;
+	char *path;
 
 	enum obs_media_state state;
 	obs_hotkey_id hotkey;
@@ -229,6 +230,11 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 
 	obs_frontend_take_source_screenshot(currentScene);
 
+	const char *path = obs_frontend_get_current_record_output_path();
+	if (sensor->path)
+		bfree(sensor->path);
+	sensor->path = bstrdup(path);
+	
 	sensor->hotkey = obs_hotkey_register_source(
 		context,
 		"MediaSource.Restart",
@@ -271,6 +277,9 @@ static void hswf_destroy(void *data)
 
 	if (sensor->text)
 		bfree(sensor->text);
+
+	if (sensor->path)
+		bfree(sensor->path);
 
 	bfree(sensor->input);
 	bfree(sensor);

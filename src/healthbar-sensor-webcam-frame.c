@@ -23,9 +23,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <util/platform.h>
 #include <media-playback/media.h>
 #include <obs-frontend-api.h>
+#include <curl/curl.h>
 
 #define GREENCAMFRAME  (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
 #define REDCAMFRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/RedMarco02.webm"
+#define API_URL (char *)"http://127.0.0.1:8080/"
 
 
 struct healthbar_sensor_webcam_frame {
@@ -33,13 +35,14 @@ struct healthbar_sensor_webcam_frame {
 	mp_media_t media;
 	bool media_valid;
 
-	char *input;
+	char *framePath;
 	
 	char *text;
 	int someNumber;
 
 	obs_source_t *currentScene;
-	char *path;
+	char *screenshotPath;
+	CURL *curl;
 
 	enum obs_media_state state;
 	obs_hotkey_id hotkey;
@@ -155,7 +158,7 @@ static void media_stopped(void *opaque)
 
 static void hswf_media_open(struct healthbar_sensor_webcam_frame *sensor)
 {
-	if (sensor->input && *sensor->input) {
+	if (sensor->framePath && *sensor->framePath) {
 		struct mp_media_info info = {
 			.opaque = sensor,
 			.v_cb = get_frame,
@@ -163,7 +166,7 @@ static void hswf_media_open(struct healthbar_sensor_webcam_frame *sensor)
 			.v_seek_cb = seek_frame,
 			.a_cb = get_audio,
 			.stop_cb = media_stopped,
-			.path = sensor->input,
+			.path = sensor->framePath,
 			.format = NULL,
 			.buffering = 2 * 1024 * 1024,
 			.speed = 100,
@@ -193,13 +196,13 @@ static void hswf_media_start(struct healthbar_sensor_webcam_frame *sensor)
 static void hswf_update(void *data, obs_data_t *settings)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
-	bfree(sensor->input);
-	char *input = GREENCAMFRAME;
+	bfree(sensor->framePath);
+	char *framePath = GREENCAMFRAME;
 
 	const char *text = obs_data_get_string(settings, "text");
 	const int someNumber = obs_data_get_int(settings, "someNumber");
 
-	sensor->input = input ? bstrdup(input) : NULL;
+	sensor->framePath = framePath ? bstrdup(framePath) : NULL;
 	if (sensor->text)
 		bfree(sensor->text);
 	sensor->text = bstrdup(text);
@@ -228,12 +231,28 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	obs_source_t *currentScene = obs_frontend_get_current_scene();
 	sensor->currentScene = currentScene;
 
+	CURL *curl = curl_easy_init();
+
+	sensor->curl = curl_easy_init();
+
+	if (sensor->curl) {
+		curl_easy_setopt(sensor->curl, CURLOPT_URL, API_URL);
+		CURLcode result = curl_easy_perform(sensor->curl);
+		if (result == CURLE_OK) {
+			blog(LOG_INFO, "HSWF - CURL result working");
+		} else {
+			blog(LOG_INFO, "HSWF - CURL error: %s", curl_easy_strerror(result));
+		}
+	} else {
+		blog(LOG_INFO, "HSWF - CURL init failed");
+	}
+
 	obs_frontend_take_source_screenshot(currentScene);
 
-	const char *path = obs_frontend_get_current_record_output_path();
-	if (sensor->path)
-		bfree(sensor->path);
-	sensor->path = bstrdup(path);
+	const char *screenshotPath = obs_frontend_get_current_record_output_path();
+	if (sensor->screenshotPath)
+		bfree(sensor->screenshotPath);
+	sensor->screenshotPath = bstrdup(screenshotPath);
 	
 	sensor->hotkey = obs_hotkey_register_source(
 		context,
@@ -278,10 +297,13 @@ static void hswf_destroy(void *data)
 	if (sensor->text)
 		bfree(sensor->text);
 
-	if (sensor->path)
-		bfree(sensor->path);
+	if (sensor->screenshotPath)
+		bfree(sensor->screenshotPath);
 
-	bfree(sensor->input);
+	if (sensor->curl)
+		curl_easy_cleanup(sensor->curl);
+
+	bfree(sensor->framePath);
 	bfree(sensor);
 }
 
@@ -297,7 +319,7 @@ static obs_missing_files_t *hswf_missingfiles(void *data)
 	struct healthbar_sensor_webcam_frame *sensor = data;
 	obs_missing_files_t *files = obs_missing_files_create();
 
-	if (strcmp(sensor->input, "") != 0 && !os_file_exists(sensor->input)) {
+	if (strcmp(sensor->framePath, "") != 0 && !os_file_exists(sensor->framePath)) {
 		blog(LOG_INFO, "HSWF - ERROR: missing media file");
 	}
 
@@ -417,12 +439,12 @@ static void hswf_mouse_click(void *data, const struct obs_mouse_event *event,
 		return;
 
 	struct healthbar_sensor_webcam_frame *sensor = data;
-	char *input;
+	char *framePath;
 
-	if (strcmp(sensor->input, GREENCAMFRAME) == 0) {
-		input = REDCAMFRAME;
+	if (strcmp(sensor->framePath, GREENCAMFRAME) == 0) {
+		framePath = REDCAMFRAME;
 	} else {
-		input = GREENCAMFRAME;
+		framePath = GREENCAMFRAME;
 	}
 
 	if (sensor->media_valid) {
@@ -430,8 +452,8 @@ static void hswf_mouse_click(void *data, const struct obs_mouse_event *event,
 		sensor->media_valid = false;
 	}
 
-	bfree(sensor->input);
-	sensor->input = input ? bstrdup(input) : NULL;
+	bfree(sensor->framePath);
+	sensor->framePath = framePath ? bstrdup(framePath) : NULL;
 
 	bool active = obs_source_active(sensor->context);
 	if(active) {

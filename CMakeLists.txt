@@ -15,6 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(LibObs REQUIRED)
 find_package(FFmpeg REQUIRED
 	COMPONENTS avcodec avfilter avdevice avutil swscale avformat swresample)
+find_package(CURL REQUIRED)
 
 configure_file(
     src/plugin-macros.h.in
@@ -61,6 +62,7 @@ include_directories(
     ${LIBOBS_INCLUDE_DIR}
     ${FFMPEG_INCLUDE_DIRS}
     "${LIBOBS_INCLUDE_DIR}/../UI/obs-frontend-api"
+    ${CURL_INCLUDE_DIR}
     #${MEDIA_PLAYBACK_DIR}
 )
 #add_subdirectory(${MEDIA_PLAYBACK_DIR} "${CMAKE_CURRENT_BINARY_DIR}/media-playback")
@@ -69,6 +71,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     ${LIBOBS_LIB}
     ${FFMPEG_LIBRARIES}
     ${OBS_FRONTEND_LIB}
+    ${CURL_LIBRARY}
 )
 
 # --- End of section ---

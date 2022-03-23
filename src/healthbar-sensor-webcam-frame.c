@@ -220,6 +220,16 @@ static void hswf_update(void *data, obs_data_t *settings)
 	}
 }
 
+size_t got_data_from_api(char *buffer, size_t itemsize, size_t nitems, void* ignorethis)
+{
+	size_t bytes = itemsize * nitems;
+	blog(LOG_INFO, "HSWF - got_data_from_api: %zu bytes", bytes);
+
+	blog(LOG_INFO, "HSWF - got_data_from_api: %s", buffer);
+
+	return bytes;
+}
+
 static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 {
 	UNUSED_PARAMETER(settings);
@@ -237,7 +247,10 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 
 	if (sensor->curl) {
 		curl_easy_setopt(sensor->curl, CURLOPT_URL, API_URL);
+		curl_easy_setopt(sensor->curl, CURLOPT_WRITEFUNCTION, got_data_from_api);
+
 		CURLcode result = curl_easy_perform(sensor->curl);
+		
 		if (result == CURLE_OK) {
 			blog(LOG_INFO, "HSWF - CURL result working");
 		} else {

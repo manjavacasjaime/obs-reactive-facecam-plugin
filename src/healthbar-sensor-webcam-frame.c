@@ -27,8 +27,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define GREENCAMFRAME  (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
 #define REDCAMFRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/RedMarco02.webm"
-#define API_URL (char *)"http://127.0.0.1:8080/"
+#define API_URL (char *)"http://127.0.0.1:8080/post"
 
+
+struct json_object *parsed_json;
+struct json_object *name;
+struct json_object *age;
 
 struct healthbar_sensor_webcam_frame {
 	obs_source_t *context;
@@ -49,6 +53,12 @@ struct healthbar_sensor_webcam_frame {
 	obs_hotkey_pair_id play_pause_hotkey;
 	obs_hotkey_id stop_hotkey;
 };
+
+struct json_object *json_tokener_parse(const char *str);
+void json_object_object_get_ex(const struct json_object *obj, const char *key,
+                                struct json_object **value);
+const char *json_object_get_string(struct json_object *jso);
+int32_t json_object_get_int(const struct json_object *jso);
 
 static const char *hswf_getname(void *unused)
 {
@@ -241,12 +251,23 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	obs_source_t *currentScene = obs_frontend_get_current_scene();
 	sensor->currentScene = currentScene;
 
+	const char *jsonStr = "{\"name\":  \"Alice\", \"age\":  \"30\"}";
+	parsed_json = json_tokener_parse(jsonStr);
+
+	json_object_object_get_ex(parsed_json, "name", &name);
+	json_object_object_get_ex(parsed_json, "age", &age);
+
+	blog(LOG_INFO, "HSWF - Name: %s", json_object_get_string(name));
+	blog(LOG_INFO, "HSWF - Age: %d", json_object_get_int(age));
+
 	CURL *curl = curl_easy_init();
 
 	sensor->curl = curl_easy_init();
 
 	if (sensor->curl) {
 		curl_easy_setopt(sensor->curl, CURLOPT_URL, API_URL);
+		//curl_easy_setopt(sensor->curl, CURLOPT_POSTFIELDS, "name=daniel&project=curl");
+		curl_easy_setopt(sensor->curl, CURLOPT_POSTFIELDS, "name=daniel&project=curl");
 		curl_easy_setopt(sensor->curl, CURLOPT_WRITEFUNCTION, got_data_from_api);
 
 		CURLcode result = curl_easy_perform(sensor->curl);

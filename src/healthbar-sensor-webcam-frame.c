@@ -30,9 +30,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define API_URL (char *)"http://127.0.0.1:8080/post"
 
 
-struct json_object *parsed_json;
+/*struct json_object *parsed_json;
 struct json_object *name;
-struct json_object *age;
+struct json_object *age;*/
 
 struct healthbar_sensor_webcam_frame {
 	obs_source_t *context;
@@ -251,14 +251,14 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	obs_source_t *currentScene = obs_frontend_get_current_scene();
 	sensor->currentScene = currentScene;
 
-	const char *jsonStr = "{\"name\":  \"Alice\", \"age\":  \"30\"}";
+	/*const char *jsonStr = "{\"name\":  \"Alice\", \"age\":  \"30\"}";
 	parsed_json = json_tokener_parse(jsonStr);
 
 	json_object_object_get_ex(parsed_json, "name", &name);
 	json_object_object_get_ex(parsed_json, "age", &age);
 
 	blog(LOG_INFO, "HSWF - Name: %s", json_object_get_string(name));
-	blog(LOG_INFO, "HSWF - Age: %d", json_object_get_int(age));
+	blog(LOG_INFO, "HSWF - Age: %d", json_object_get_int(age));*/
 
 	CURL *curl = curl_easy_init();
 

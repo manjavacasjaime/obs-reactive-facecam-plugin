@@ -30,6 +30,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define TESTIMAGE (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/testImage.png"
 #define API_URL (char *)"http://127.0.0.1:8080/post"
 
+#define BUSCARJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/buscarJJ.png"
+#define CURANDOJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/curandoJJ.png"
+#define LEYENDASJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/leyendasJJ.png"
+#define LLENABLANCOJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/llenaBlancoJJ.png"
+#define LLENAJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/llenaJJ.png"
+#define LLENANEGROJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/llenaNegroJJ.png"
+#define POCAEMPTYJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/pocaEmptyJJ.png"
+#define POCAROJAJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/pocaRojaJJ.png"
+
 
 /*struct json_object *parsed_json;
 struct json_object *name;
@@ -274,7 +283,7 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	blog(LOG_INFO, "HSWF - Age: %d", json_object_get_int(age));*/
 
 	FILE *fd;
-  	fd = fopen(TESTIMAGE, "rb");
+  	fd = fopen(POCAROJAJJ, "rb");
 
 	CURL *curl = curl_easy_init();
 

@@ -274,7 +274,7 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	blog(LOG_INFO, "HSWF - Age: %d", json_object_get_int(age));*/
 
 	FILE *fd;
-  	fd = fopen(TESTIMAGE, "r");
+  	fd = fopen(TESTIMAGE, "rb");
 
 	CURL *curl = curl_easy_init();
 

@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define GREENCAMFRAME  (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
 #define REDCAMFRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/RedMarco02.webm"
+#define TESTIMAGE (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/testImage.png"
 #define API_URL (char *)"http://127.0.0.1:8080/post"
 
 
@@ -240,6 +241,18 @@ size_t got_data_from_api(char *buffer, size_t itemsize, size_t nitems, void* ign
 	return bytes;
 }
 
+size_t read_callback(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+	FILE *readhere = (FILE *)userdata;
+
+	/* copy as much data as possible into the 'ptr' buffer, but no more than
+	'size' * 'nmemb' bytes! */
+	size_t bytes = fread(ptr, size, nmemb, readhere);
+
+	blog(LOG_INFO, "HSWF - read_callback: %zu bytes", bytes);
+	return bytes;
+}
+
 static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 {
 	UNUSED_PARAMETER(settings);
@@ -260,14 +273,21 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	blog(LOG_INFO, "HSWF - Name: %s", json_object_get_string(name));
 	blog(LOG_INFO, "HSWF - Age: %d", json_object_get_int(age));*/
 
+	FILE *fd;
+  	fd = fopen(TESTIMAGE, "r");
+
 	CURL *curl = curl_easy_init();
 
 	sensor->curl = curl_easy_init();
 
 	if (sensor->curl) {
 		curl_easy_setopt(sensor->curl, CURLOPT_URL, API_URL);
+		curl_easy_setopt(sensor->curl, CURLOPT_UPLOAD, 1L);
+		curl_easy_setopt(sensor->curl, CURLOPT_READFUNCTION, read_callback);
+		curl_easy_setopt(sensor->curl, CURLOPT_READDATA, fd);
+
 		//curl_easy_setopt(sensor->curl, CURLOPT_POSTFIELDS, "name=daniel&project=curl");
-		curl_easy_setopt(sensor->curl, CURLOPT_POSTFIELDS, "name=daniel&project=curl");
+		curl_easy_setopt(sensor->curl, CURLOPT_CUSTOMREQUEST, "POST");
 		curl_easy_setopt(sensor->curl, CURLOPT_WRITEFUNCTION, got_data_from_api);
 
 		CURLcode result = curl_easy_perform(sensor->curl);
@@ -280,6 +300,8 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	} else {
 		blog(LOG_INFO, "HSWF - CURL init failed");
 	}
+
+	fclose(fd);
 
 	obs_frontend_take_source_screenshot(currentScene);
 

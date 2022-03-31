@@ -30,6 +30,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define TESTIMAGE (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/testImage.png"
 #define API_URL (char *)"http://127.0.0.1:8080/post"
 
+#define INICIOJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/inicioJJ.png"
+#define BUSCARJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/buscarJJ.png"
+#define LLENAJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/llenaJJ.png"
+#define BAJAROJAJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/bajaRojaJJ.png"
+#define BAJAEMPTYJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/bajaEmptyJJ.png"
+
 
 /*struct json_object *parsed_json;
 struct json_object *name;

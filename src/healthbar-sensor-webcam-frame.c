@@ -40,11 +40,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define POCAROJAJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/pocaRojaJJ.png"
 
 
-/*struct json_object *parsed_json;
+struct json_object *parsed_json;
 struct json_object *isImageIdentified;
 struct json_object *errorMessage;
 struct json_object *isLifeBarFound;
-struct json_object *lifePercentage;*/
+struct json_object *lifePercentage;
 
 struct healthbar_sensor_webcam_frame {
 	obs_source_t *context;
@@ -66,11 +66,12 @@ struct healthbar_sensor_webcam_frame {
 	obs_hotkey_id stop_hotkey;
 };
 
-/*struct json_object *json_tokener_parse(const char *str);
+struct json_object *json_tokener_parse(const char *str);
 bool json_object_object_get_ex(const struct json_object *obj, const char *key,
                                 struct json_object **value);
 const char *json_object_get_string(struct json_object *jso);
-bool json_object_get_boolean(const struct json_object *jso);*/
+bool json_object_get_boolean(const struct json_object *jso);
+int json_object_put(struct json_object *jso);
 
 static const char *hswf_getname(void *unused)
 {
@@ -251,7 +252,7 @@ size_t got_data_from_api(char *buffer, size_t itemsize, size_t nitems, void* ign
 
 	blog(LOG_INFO, "HSWF - got_data_from_api: %s", buffer);
 
-	/*parsed_json = json_tokener_parse(buffer);
+	parsed_json = json_tokener_parse(buffer);
 
 	json_object_object_get_ex(parsed_json, "isImageIdentified", &isImageIdentified);
 	json_object_object_get_ex(parsed_json, "errorMessage", &errorMessage);
@@ -263,7 +264,7 @@ size_t got_data_from_api(char *buffer, size_t itemsize, size_t nitems, void* ign
 	blog(LOG_INFO, "HSWF - Life bar found: %i", json_object_get_boolean(isLifeBarFound));
 	blog(LOG_INFO, "HSWF - Life percentage: %s", json_object_get_string(lifePercentage));
 
-	json_object_put(parsed_json);*/
+	json_object_put(parsed_json);
 
 	return bytes;
 }
@@ -325,6 +326,7 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	if (sensor->screenshotPath)
 		bfree(sensor->screenshotPath);
 	sensor->screenshotPath = bstrdup(screenshotPath);
+	bfree((void *) screenshotPath);
 	
 	sensor->hotkey = obs_hotkey_register_source(
 		context,

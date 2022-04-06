@@ -41,8 +41,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 /*struct json_object *parsed_json;
-struct json_object *name;
-struct json_object *age;*/
+struct json_object *isImageIdentified;
+struct json_object *errorMessage;
+struct json_object *isLifeBarFound;
+struct json_object *lifePercentage;*/
 
 struct healthbar_sensor_webcam_frame {
 	obs_source_t *context;
@@ -64,11 +66,11 @@ struct healthbar_sensor_webcam_frame {
 	obs_hotkey_id stop_hotkey;
 };
 
-struct json_object *json_tokener_parse(const char *str);
-void json_object_object_get_ex(const struct json_object *obj, const char *key,
+/*struct json_object *json_tokener_parse(const char *str);
+bool json_object_object_get_ex(const struct json_object *obj, const char *key,
                                 struct json_object **value);
 const char *json_object_get_string(struct json_object *jso);
-int32_t json_object_get_int(const struct json_object *jso);
+bool json_object_get_boolean(const struct json_object *jso);*/
 
 static const char *hswf_getname(void *unused)
 {
@@ -242,10 +244,26 @@ static void hswf_update(void *data, obs_data_t *settings)
 
 size_t got_data_from_api(char *buffer, size_t itemsize, size_t nitems, void* ignorethis)
 {
+	UNUSED_PARAMETER(ignorethis);
+
 	size_t bytes = itemsize * nitems;
 	blog(LOG_INFO, "HSWF - got_data_from_api: %zu bytes", bytes);
 
 	blog(LOG_INFO, "HSWF - got_data_from_api: %s", buffer);
+
+	/*parsed_json = json_tokener_parse(buffer);
+
+	json_object_object_get_ex(parsed_json, "isImageIdentified", &isImageIdentified);
+	json_object_object_get_ex(parsed_json, "errorMessage", &errorMessage);
+	json_object_object_get_ex(parsed_json, "isLifeBarFound", &isLifeBarFound);
+	json_object_object_get_ex(parsed_json, "lifePercentage", &lifePercentage);
+
+	blog(LOG_INFO, "HSWF - Image identified: %i", json_object_get_boolean(isImageIdentified));
+	blog(LOG_INFO, "HSWF - Error message: %s", json_object_get_string(errorMessage));
+	blog(LOG_INFO, "HSWF - Life bar found: %i", json_object_get_boolean(isLifeBarFound));
+	blog(LOG_INFO, "HSWF - Life percentage: %s", json_object_get_string(lifePercentage));
+
+	json_object_put(parsed_json);*/
 
 	return bytes;
 }
@@ -273,17 +291,8 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	obs_source_t *currentScene = obs_frontend_get_current_scene();
 	sensor->currentScene = currentScene;
 
-	/*const char *jsonStr = "{\"name\":  \"Alice\", \"age\":  \"30\"}";
-	parsed_json = json_tokener_parse(jsonStr);
-
-	json_object_object_get_ex(parsed_json, "name", &name);
-	json_object_object_get_ex(parsed_json, "age", &age);
-
-	blog(LOG_INFO, "HSWF - Name: %s", json_object_get_string(name));
-	blog(LOG_INFO, "HSWF - Age: %d", json_object_get_int(age));*/
-
 	FILE *fd;
-  	fd = fopen(POCAROJAJJ, "rb");
+  	fd = fopen(CURANDOJJ, "rb");
 
 	CURL *curl = curl_easy_init();
 
@@ -294,8 +303,6 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 		curl_easy_setopt(sensor->curl, CURLOPT_UPLOAD, 1L);
 		curl_easy_setopt(sensor->curl, CURLOPT_READFUNCTION, read_callback);
 		curl_easy_setopt(sensor->curl, CURLOPT_READDATA, fd);
-
-		//curl_easy_setopt(sensor->curl, CURLOPT_POSTFIELDS, "name=daniel&project=curl");
 		curl_easy_setopt(sensor->curl, CURLOPT_CUSTOMREQUEST, "POST");
 		curl_easy_setopt(sensor->curl, CURLOPT_WRITEFUNCTION, got_data_from_api);
 
@@ -369,14 +376,15 @@ static void hswf_destroy(void *data)
 		curl_easy_cleanup(sensor->curl);
 
 	bfree(sensor->framePath);
+	obs_source_release(sensor->currentScene);
 	bfree(sensor);
 }
 
 static void hswf_tick(void *data, float seconds)
 {
-	struct healthbar_sensor_webcam_frame *sensor = data;
-
 	UNUSED_PARAMETER(seconds);
+
+	struct healthbar_sensor_webcam_frame *sensor = data;
 }
 
 static obs_missing_files_t *hswf_missingfiles(void *data)
@@ -500,6 +508,10 @@ static void hswf_defaults(obs_data_t *settings)
 static void hswf_mouse_click(void *data, const struct obs_mouse_event *event,
 				int32_t type, bool mouse_up, uint32_t click_count)
 {
+	UNUSED_PARAMETER(event);
+	UNUSED_PARAMETER(type);
+	UNUSED_PARAMETER(click_count);
+	
 	if (mouse_up)
 		return;
 
@@ -525,10 +537,6 @@ static void hswf_mouse_click(void *data, const struct obs_mouse_event *event,
 		hswf_media_open(sensor);
 		hswf_media_start(sensor);
 	}
-
-	UNUSED_PARAMETER(event);
-	UNUSED_PARAMETER(type);
-	UNUSED_PARAMETER(click_count);
 }
 
 

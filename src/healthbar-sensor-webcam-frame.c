@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <media-playback/media.h>
 #include <obs-frontend-api.h>
 #include <curl/curl.h>
+#include <time.h>
 
 #define GREENCAMFRAME  (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
 #define REDCAMFRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/RedMarco02.webm"
@@ -72,6 +73,22 @@ bool json_object_object_get_ex(const struct json_object *obj, const char *key,
 const char *json_object_get_string(struct json_object *jso);
 bool json_object_get_boolean(const struct json_object *jso);
 int json_object_put(struct json_object *jso);
+
+time_t get_time_t_from_string(char *date)
+{
+	int year, month, day, h, m, s;
+	struct tm when;
+	sscanf_s(date, "%d-%d-%d %d-%d-%d", &year, &month, &day, &h, &m, &s);
+
+	when.tm_year = year - 1900;
+	when.tm_mon = month - 1;
+	when.tm_mday = day;
+	when.tm_hour = h;
+	when.tm_min = m;
+	when.tm_sec = s;
+
+	return mktime(&when);
+}
 
 static const char *hswf_getname(void *unused)
 {
@@ -327,6 +344,10 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 		bfree(sensor->screenshotPath);
 	sensor->screenshotPath = bstrdup(screenshotPath);
 	bfree((void *) screenshotPath);
+
+	//string to time_t, pudes comparar time_t con difftime
+	time_t t = get_time_t_from_string("2022-04-06 20-51-20");
+	blog(LOG_INFO, "HSWF - Time: %lld", (long long) t);
 	
 	sensor->hotkey = obs_hotkey_register_source(
 		context,

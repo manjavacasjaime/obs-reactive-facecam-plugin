@@ -322,8 +322,6 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	FILE *fd;
   	fd = fopen(newestFilePath, "rb");
 
-	CURL *curl = curl_easy_init();
-
 	sensor->curl = curl_easy_init();
 
 	if (sensor->curl) {

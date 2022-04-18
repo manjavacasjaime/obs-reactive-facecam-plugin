@@ -307,8 +307,20 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	obs_source_t *currentScene = obs_frontend_get_current_scene();
 	sensor->currentScene = currentScene;
 
+	obs_frontend_take_source_screenshot(currentScene);
+
+	const char *screenshotPath = obs_frontend_get_current_record_output_path();
+	if (sensor->screenshotPath)
+		bfree(sensor->screenshotPath);
+	sensor->screenshotPath = bstrdup(screenshotPath);
+	bfree((void *) screenshotPath);
+	
+	//aquí vamos a obtener el ultimo archivo en screenshotPath
+	ftw(sensor->screenshotPath, check_if_newer_file, 1);
+	blog(LOG_INFO, "HSWF - Newest file: %s", newestFilePath);
+
 	FILE *fd;
-  	fd = fopen(CURANDOJJ, "rb");
+  	fd = fopen(newestFilePath, "rb");
 
 	CURL *curl = curl_easy_init();
 
@@ -334,18 +346,7 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	}
 
 	fclose(fd);
-
-	obs_frontend_take_source_screenshot(currentScene);
-
-	const char *screenshotPath = obs_frontend_get_current_record_output_path();
-	if (sensor->screenshotPath)
-		bfree(sensor->screenshotPath);
-	sensor->screenshotPath = bstrdup(screenshotPath);
-	bfree((void *) screenshotPath);
-	
-	//aquí vamos a obtener el ultimo archivo en screenshotPath
-	ftw(sensor->screenshotPath, check_if_newer_file, 1);
-	blog(LOG_INFO, "HSWF - Newest file: %s", newestFilePath);
+	remove(newestFilePath);
 	
 	sensor->hotkey = obs_hotkey_register_source(
 		context,

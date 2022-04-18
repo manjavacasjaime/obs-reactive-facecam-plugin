@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <obs-frontend-api.h>
 #include <curl/curl.h>
 #include <time.h>
+#include <ftw.h>
 
 #define GREENCAMFRAME  (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
 #define REDCAMFRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/RedMarco02.webm"
@@ -46,6 +47,9 @@ struct json_object *isImageIdentified;
 struct json_object *errorMessage;
 struct json_object *isLifeBarFound;
 struct json_object *lifePercentage;
+
+time_t newestFileTime = 0;
+char newestFile[PATH_MAX];
 
 struct healthbar_sensor_webcam_frame {
 	obs_source_t *context;
@@ -74,20 +78,14 @@ const char *json_object_get_string(struct json_object *jso);
 bool json_object_get_boolean(const struct json_object *jso);
 int json_object_put(struct json_object *jso);
 
-time_t get_time_t_from_string(char *date)
+int check_if_newer_file(const char *path, const struct stat *sb, int typeflag)
 {
-	int year, month, day, h, m, s;
-	struct tm when;
-	sscanf_s(date, "%d-%d-%d %d-%d-%d", &year, &month, &day, &h, &m, &s);
+    if (typeflag == FTW_F && sb->st_mtime > newestFileTime) {
+        newestFileTime = sb->st_mtime;
+        strncpy(newestFile, path, PATH_MAX);
+    }
 
-	when.tm_year = year - 1900;
-	when.tm_mon = month - 1;
-	when.tm_mday = day;
-	when.tm_hour = h;
-	when.tm_min = m;
-	when.tm_sec = s;
-
-	return mktime(&when);
+	return 0;
 }
 
 static const char *hswf_getname(void *unused)
@@ -344,10 +342,10 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 		bfree(sensor->screenshotPath);
 	sensor->screenshotPath = bstrdup(screenshotPath);
 	bfree((void *) screenshotPath);
-
-	//string to time_t, pudes comparar time_t con difftime
-	time_t t = get_time_t_from_string("2022-04-06 20-51-20");
-	blog(LOG_INFO, "HSWF - Time: %lld", (long long) t);
+	
+	//aquí vamos a obtener el ultimo archivo en screenshotPath
+	ftw(sensor->screenshotPath, check_if_newer_file, 1);
+	blog(LOG_INFO, "HSWF - Newest file: %s", newestFile);
 	
 	sensor->hotkey = obs_hotkey_register_source(
 		context,

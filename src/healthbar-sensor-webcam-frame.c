@@ -26,6 +26,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <curl/curl.h>
 #include <time.h>
 #include <ftw.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <semaphore.h>
 
 #define GREENCAMFRAME  (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
 #define REDCAMFRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/RedMarco02.webm"
@@ -61,6 +64,8 @@ struct healthbar_sensor_webcam_frame {
 	char *text;
 	int someNumber;
 
+	sem_t mutex;
+	
 	obs_source_t *currentScene;
 	char *screenshotPath;
 	CURL *curl;
@@ -86,6 +91,23 @@ int check_if_newer_file(const char *path, const struct stat *sb, int typeflag)
     }
 
 	return 0;
+}
+
+void *thread(void *sensor)
+{
+    struct healthbar_sensor_webcam_frame *my_sensor =
+		(struct healthbar_sensor_webcam_frame *) sensor;
+	
+	//wait
+    sem_wait(&my_sensor->mutex);
+	blog(LOG_INFO, "HSWF - semaphore: Entered...");
+  
+    //critical section
+    sleep(4);
+      
+    //signal
+	blog(LOG_INFO, "HSWF - semaphore: Just Exiting...");
+    sem_post(&my_sensor->mutex);
 }
 
 static const char *hswf_getname(void *unused)
@@ -303,6 +325,15 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	struct healthbar_sensor_webcam_frame *sensor =
 		bzalloc(sizeof(struct healthbar_sensor_webcam_frame));
 	sensor->context = context;
+
+	sem_init(&sensor->mutex, 0, 1);
+    pthread_t t1, t2;
+    pthread_create(&t1, NULL, thread, (void*) sensor);
+    sleep(2);
+    pthread_create(&t2, NULL, thread, (void*) sensor);
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+    sem_destroy(&sensor->mutex);
 
 	obs_source_t *currentScene = obs_frontend_get_current_scene();
 	sensor->currentScene = currentScene;

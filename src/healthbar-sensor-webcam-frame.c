@@ -65,6 +65,8 @@ struct healthbar_sensor_webcam_frame {
 	int someNumber;
 
 	sem_t mutex;
+	//0 is green, 1 is red
+	int currentFrame;
 	
 	obs_source_t *currentScene;
 	char *screenshotPath;
@@ -129,55 +131,6 @@ size_t read_callback(char *ptr, size_t size, size_t nmemb, void *userdata)
 
 	blog(LOG_INFO, "HSWF - read_callback: %zu bytes", bytes);
 	return bytes;
-}
-
-void *thread_take_screenshot_and_send_to_api(void *sensor)
-{
-    struct healthbar_sensor_webcam_frame *my_sensor =
-		(struct healthbar_sensor_webcam_frame *) sensor;
-	
-	//wait
-    sem_wait(&my_sensor->mutex);
-	blog(LOG_INFO, "HSWF - semaphore: Entered...");
-  
-    //critical section
-    obs_frontend_take_source_screenshot(my_sensor->currentScene);
-	
-	//get last file from screenshotPath
-	ftw(my_sensor->screenshotPath, check_if_newer_file, 1);
-	blog(LOG_INFO, "HSWF - Newest file: %s", newestFilePath);
-
-	FILE *fd;
-  	fd = fopen(newestFilePath, "rb");
-
-	my_sensor->curl = curl_easy_init();
-
-	if (my_sensor->curl) {
-		curl_easy_setopt(my_sensor->curl, CURLOPT_URL, API_URL);
-		curl_easy_setopt(my_sensor->curl, CURLOPT_UPLOAD, 1L);
-		curl_easy_setopt(my_sensor->curl, CURLOPT_READFUNCTION, read_callback);
-		curl_easy_setopt(my_sensor->curl, CURLOPT_READDATA, fd);
-		curl_easy_setopt(my_sensor->curl, CURLOPT_CUSTOMREQUEST, "POST");
-		curl_easy_setopt(my_sensor->curl, CURLOPT_WRITEFUNCTION, got_data_from_api);
-
-		CURLcode result = curl_easy_perform(my_sensor->curl);
-		
-		if (result == CURLE_OK) {
-			blog(LOG_INFO, "HSWF - CURL result working");
-		} else {
-			blog(LOG_INFO, "HSWF - CURL error: %s", curl_easy_strerror(result));
-		}
-	} else {
-		blog(LOG_INFO, "HSWF - CURL init failed");
-	}
-
-	fclose(fd);
-	remove(newestFilePath);
-      
-    sleep(4);
-	//signal
-	blog(LOG_INFO, "HSWF - semaphore: Just Exiting...");
-    sem_post(&my_sensor->mutex);
 }
 
 static const char *hswf_getname(void *unused)
@@ -323,6 +276,95 @@ static void hswf_media_start(struct healthbar_sensor_webcam_frame *sensor)
 	obs_source_media_started(sensor->context);
 }
 
+void change_webcam_frame_to_file(struct healthbar_sensor_webcam_frame *sensor,
+				char *newFramePath)
+{
+
+	if (sensor->media_valid) {
+		mp_media_free(&sensor->media);
+		sensor->media_valid = false;
+	}
+
+	bfree(sensor->framePath);
+	sensor->framePath = newFramePath ? bstrdup(newFramePath) : NULL;
+
+	bool active = obs_source_active(sensor->context);
+	if(active) {
+		hswf_media_open(sensor);
+		hswf_media_start(sensor);
+	}
+}
+
+void *thread_take_screenshot_and_send_to_api(void *sensor)
+{
+    struct healthbar_sensor_webcam_frame *my_sensor =
+		(struct healthbar_sensor_webcam_frame *) sensor;
+	
+	//wait
+    sem_wait(&my_sensor->mutex);
+	blog(LOG_INFO, "HSWF - semaphore: Entered...");
+  
+    //critical section
+    obs_frontend_take_source_screenshot(my_sensor->currentScene);
+	
+	//get last file from screenshotPath
+	ftw(my_sensor->screenshotPath, check_if_newer_file, 1);
+	blog(LOG_INFO, "HSWF - Newest file: %s", newestFilePath);
+
+	FILE *fd;
+  	fd = fopen(newestFilePath, "rb");
+
+	my_sensor->curl = curl_easy_init();
+
+	if (my_sensor->curl) {
+		curl_easy_setopt(my_sensor->curl, CURLOPT_URL, API_URL);
+		curl_easy_setopt(my_sensor->curl, CURLOPT_UPLOAD, 1L);
+		curl_easy_setopt(my_sensor->curl, CURLOPT_READFUNCTION, read_callback);
+		curl_easy_setopt(my_sensor->curl, CURLOPT_READDATA, fd);
+		curl_easy_setopt(my_sensor->curl, CURLOPT_CUSTOMREQUEST, "POST");
+		curl_easy_setopt(my_sensor->curl, CURLOPT_WRITEFUNCTION, got_data_from_api);
+
+		CURLcode result = curl_easy_perform(my_sensor->curl);
+		
+		if (result == CURLE_OK) {
+			blog(LOG_INFO, "HSWF - CURL result working");
+		} else {
+			blog(LOG_INFO, "HSWF - CURL error: %s", curl_easy_strerror(result));
+		}
+	} else {
+		blog(LOG_INFO, "HSWF - CURL init failed");
+	}
+
+	fclose(fd);
+	remove(newestFilePath);
+
+	char *ptr;
+	bool isImgId = false;
+	bool isLBFound = false;
+	double lifePerc = 0.0;
+
+	if (isImageIdentified && isLifeBarFound && lifePercentage) {
+		isImgId = json_object_get_boolean(isImageIdentified);
+		isLBFound = json_object_get_boolean(isLifeBarFound);
+		lifePerc = strtod(json_object_get_string(lifePercentage), &ptr);
+	}
+
+	if (isImgId && isLBFound) {
+		if (lifePerc > 0.5 && my_sensor->currentFrame != 0) {
+			change_webcam_frame_to_file(my_sensor, GREENCAMFRAME);
+			my_sensor-> currentFrame = 0;
+		} else if (lifePerc <= 0.5 && my_sensor->currentFrame != 1) {
+			change_webcam_frame_to_file(my_sensor, REDCAMFRAME);
+			my_sensor-> currentFrame = 1;
+		}
+	}
+      
+    sleep(4);
+	//signal
+	blog(LOG_INFO, "HSWF - semaphore: Just Exiting...");
+    sem_post(&my_sensor->mutex);
+}
+
 static void hswf_update(void *data, obs_data_t *settings)
 {
 	struct healthbar_sensor_webcam_frame *sensor = data;
@@ -359,6 +401,7 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	sensor->context = context;
 
 	sem_init(&sensor->mutex, 0, 1);
+	sensor->currentFrame = 0;
 
 	obs_source_t *currentScene = obs_frontend_get_current_scene();
 	sensor->currentScene = currentScene;

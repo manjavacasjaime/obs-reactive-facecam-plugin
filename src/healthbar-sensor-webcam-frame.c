@@ -174,7 +174,8 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 	fclose(fd);
 	remove(newestFilePath);
       
-    //signal
+    sleep(4);
+	//signal
 	blog(LOG_INFO, "HSWF - semaphore: Just Exiting...");
     sem_post(&my_sensor->mutex);
 }
@@ -357,14 +358,7 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 		bzalloc(sizeof(struct healthbar_sensor_webcam_frame));
 	sensor->context = context;
 
-	/*sem_init(&sensor->mutex, 0, 1);
-    pthread_t t1, t2;
-    pthread_create(&t1, NULL, thread_take_screenshot_and_send_to_api, (void*) sensor);
-    sleep(2);
-    pthread_create(&t2, NULL, thread_take_screenshot_and_send_to_api, (void*) sensor);
-    pthread_join(t1, NULL);
-    pthread_join(t2, NULL);
-    sem_destroy(&sensor->mutex);*/
+	sem_init(&sensor->mutex, 0, 1);
 
 	obs_source_t *currentScene = obs_frontend_get_current_scene();
 	sensor->currentScene = currentScene;
@@ -426,6 +420,7 @@ static void hswf_destroy(void *data)
 
 	bfree(sensor->framePath);
 	obs_source_release(sensor->currentScene);
+	sem_destroy(&sensor->mutex);
 	bfree(sensor);
 }
 
@@ -434,6 +429,9 @@ static void hswf_tick(void *data, float seconds)
 	UNUSED_PARAMETER(seconds);
 
 	struct healthbar_sensor_webcam_frame *sensor = data;
+
+	pthread_t thread;
+    pthread_create(&thread, NULL, thread_take_screenshot_and_send_to_api, (void*) sensor);
 }
 
 static obs_missing_files_t *hswf_missingfiles(void *data)

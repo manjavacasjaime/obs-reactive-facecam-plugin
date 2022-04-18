@@ -93,7 +93,45 @@ int check_if_newer_file(const char *path, const struct stat *sb, int typeflag)
 	return 0;
 }
 
-void *thread(void *sensor)
+size_t got_data_from_api(char *buffer, size_t itemsize, size_t nitems, void* ignorethis)
+{
+	UNUSED_PARAMETER(ignorethis);
+
+	size_t bytes = itemsize * nitems;
+	blog(LOG_INFO, "HSWF - got_data_from_api: %zu bytes", bytes);
+
+	blog(LOG_INFO, "HSWF - got_data_from_api: %s", buffer);
+
+	parsed_json = json_tokener_parse(buffer);
+
+	json_object_object_get_ex(parsed_json, "isImageIdentified", &isImageIdentified);
+	json_object_object_get_ex(parsed_json, "errorMessage", &errorMessage);
+	json_object_object_get_ex(parsed_json, "isLifeBarFound", &isLifeBarFound);
+	json_object_object_get_ex(parsed_json, "lifePercentage", &lifePercentage);
+
+	blog(LOG_INFO, "HSWF - Image identified: %i", json_object_get_boolean(isImageIdentified));
+	blog(LOG_INFO, "HSWF - Error message: %s", json_object_get_string(errorMessage));
+	blog(LOG_INFO, "HSWF - Life bar found: %i", json_object_get_boolean(isLifeBarFound));
+	blog(LOG_INFO, "HSWF - Life percentage: %s", json_object_get_string(lifePercentage));
+
+	json_object_put(parsed_json);
+
+	return bytes;
+}
+
+size_t read_callback(char *ptr, size_t size, size_t nmemb, void *userdata)
+{
+	FILE *readhere = (FILE *)userdata;
+
+	/* copy as much data as possible into the 'ptr' buffer, but no more than
+	'size' * 'nmemb' bytes! */
+	size_t bytes = fread(ptr, size, nmemb, readhere);
+
+	blog(LOG_INFO, "HSWF - read_callback: %zu bytes", bytes);
+	return bytes;
+}
+
+void *thread_take_screenshot_and_send_to_api(void *sensor)
 {
     struct healthbar_sensor_webcam_frame *my_sensor =
 		(struct healthbar_sensor_webcam_frame *) sensor;
@@ -103,7 +141,38 @@ void *thread(void *sensor)
 	blog(LOG_INFO, "HSWF - semaphore: Entered...");
   
     //critical section
-    sleep(4);
+    obs_frontend_take_source_screenshot(my_sensor->currentScene);
+	
+	//get last file from screenshotPath
+	ftw(my_sensor->screenshotPath, check_if_newer_file, 1);
+	blog(LOG_INFO, "HSWF - Newest file: %s", newestFilePath);
+
+	FILE *fd;
+  	fd = fopen(newestFilePath, "rb");
+
+	my_sensor->curl = curl_easy_init();
+
+	if (my_sensor->curl) {
+		curl_easy_setopt(my_sensor->curl, CURLOPT_URL, API_URL);
+		curl_easy_setopt(my_sensor->curl, CURLOPT_UPLOAD, 1L);
+		curl_easy_setopt(my_sensor->curl, CURLOPT_READFUNCTION, read_callback);
+		curl_easy_setopt(my_sensor->curl, CURLOPT_READDATA, fd);
+		curl_easy_setopt(my_sensor->curl, CURLOPT_CUSTOMREQUEST, "POST");
+		curl_easy_setopt(my_sensor->curl, CURLOPT_WRITEFUNCTION, got_data_from_api);
+
+		CURLcode result = curl_easy_perform(my_sensor->curl);
+		
+		if (result == CURLE_OK) {
+			blog(LOG_INFO, "HSWF - CURL result working");
+		} else {
+			blog(LOG_INFO, "HSWF - CURL error: %s", curl_easy_strerror(result));
+		}
+	} else {
+		blog(LOG_INFO, "HSWF - CURL init failed");
+	}
+
+	fclose(fd);
+	remove(newestFilePath);
       
     //signal
 	blog(LOG_INFO, "HSWF - semaphore: Just Exiting...");
@@ -280,44 +349,6 @@ static void hswf_update(void *data, obs_data_t *settings)
 	}
 }
 
-size_t got_data_from_api(char *buffer, size_t itemsize, size_t nitems, void* ignorethis)
-{
-	UNUSED_PARAMETER(ignorethis);
-
-	size_t bytes = itemsize * nitems;
-	blog(LOG_INFO, "HSWF - got_data_from_api: %zu bytes", bytes);
-
-	blog(LOG_INFO, "HSWF - got_data_from_api: %s", buffer);
-
-	parsed_json = json_tokener_parse(buffer);
-
-	json_object_object_get_ex(parsed_json, "isImageIdentified", &isImageIdentified);
-	json_object_object_get_ex(parsed_json, "errorMessage", &errorMessage);
-	json_object_object_get_ex(parsed_json, "isLifeBarFound", &isLifeBarFound);
-	json_object_object_get_ex(parsed_json, "lifePercentage", &lifePercentage);
-
-	blog(LOG_INFO, "HSWF - Image identified: %i", json_object_get_boolean(isImageIdentified));
-	blog(LOG_INFO, "HSWF - Error message: %s", json_object_get_string(errorMessage));
-	blog(LOG_INFO, "HSWF - Life bar found: %i", json_object_get_boolean(isLifeBarFound));
-	blog(LOG_INFO, "HSWF - Life percentage: %s", json_object_get_string(lifePercentage));
-
-	json_object_put(parsed_json);
-
-	return bytes;
-}
-
-size_t read_callback(char *ptr, size_t size, size_t nmemb, void *userdata)
-{
-	FILE *readhere = (FILE *)userdata;
-
-	/* copy as much data as possible into the 'ptr' buffer, but no more than
-	'size' * 'nmemb' bytes! */
-	size_t bytes = fread(ptr, size, nmemb, readhere);
-
-	blog(LOG_INFO, "HSWF - read_callback: %zu bytes", bytes);
-	return bytes;
-}
-
 static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 {
 	UNUSED_PARAMETER(settings);
@@ -326,56 +357,23 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 		bzalloc(sizeof(struct healthbar_sensor_webcam_frame));
 	sensor->context = context;
 
-	sem_init(&sensor->mutex, 0, 1);
+	/*sem_init(&sensor->mutex, 0, 1);
     pthread_t t1, t2;
-    pthread_create(&t1, NULL, thread, (void*) sensor);
+    pthread_create(&t1, NULL, thread_take_screenshot_and_send_to_api, (void*) sensor);
     sleep(2);
-    pthread_create(&t2, NULL, thread, (void*) sensor);
+    pthread_create(&t2, NULL, thread_take_screenshot_and_send_to_api, (void*) sensor);
     pthread_join(t1, NULL);
     pthread_join(t2, NULL);
-    sem_destroy(&sensor->mutex);
+    sem_destroy(&sensor->mutex);*/
 
 	obs_source_t *currentScene = obs_frontend_get_current_scene();
 	sensor->currentScene = currentScene;
-
-	obs_frontend_take_source_screenshot(currentScene);
 
 	const char *screenshotPath = obs_frontend_get_current_record_output_path();
 	if (sensor->screenshotPath)
 		bfree(sensor->screenshotPath);
 	sensor->screenshotPath = bstrdup(screenshotPath);
 	bfree((void *) screenshotPath);
-	
-	//aquí vamos a obtener el ultimo archivo en screenshotPath
-	ftw(sensor->screenshotPath, check_if_newer_file, 1);
-	blog(LOG_INFO, "HSWF - Newest file: %s", newestFilePath);
-
-	FILE *fd;
-  	fd = fopen(newestFilePath, "rb");
-
-	sensor->curl = curl_easy_init();
-
-	if (sensor->curl) {
-		curl_easy_setopt(sensor->curl, CURLOPT_URL, API_URL);
-		curl_easy_setopt(sensor->curl, CURLOPT_UPLOAD, 1L);
-		curl_easy_setopt(sensor->curl, CURLOPT_READFUNCTION, read_callback);
-		curl_easy_setopt(sensor->curl, CURLOPT_READDATA, fd);
-		curl_easy_setopt(sensor->curl, CURLOPT_CUSTOMREQUEST, "POST");
-		curl_easy_setopt(sensor->curl, CURLOPT_WRITEFUNCTION, got_data_from_api);
-
-		CURLcode result = curl_easy_perform(sensor->curl);
-		
-		if (result == CURLE_OK) {
-			blog(LOG_INFO, "HSWF - CURL result working");
-		} else {
-			blog(LOG_INFO, "HSWF - CURL error: %s", curl_easy_strerror(result));
-		}
-	} else {
-		blog(LOG_INFO, "HSWF - CURL init failed");
-	}
-
-	fclose(fd);
-	remove(newestFilePath);
 	
 	sensor->hotkey = obs_hotkey_register_source(
 		context,

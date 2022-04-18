@@ -49,7 +49,7 @@ struct json_object *isLifeBarFound;
 struct json_object *lifePercentage;
 
 time_t newestFileTime = 0;
-char newestFile[PATH_MAX];
+char newestFilePath[PATH_MAX];
 
 struct healthbar_sensor_webcam_frame {
 	obs_source_t *context;
@@ -82,7 +82,7 @@ int check_if_newer_file(const char *path, const struct stat *sb, int typeflag)
 {
     if (typeflag == FTW_F && sb->st_mtime > newestFileTime) {
         newestFileTime = sb->st_mtime;
-        strncpy(newestFile, path, PATH_MAX);
+        strncpy(newestFilePath, path, PATH_MAX);
     }
 
 	return 0;
@@ -345,7 +345,7 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	
 	//aquí vamos a obtener el ultimo archivo en screenshotPath
 	ftw(sensor->screenshotPath, check_if_newer_file, 1);
-	blog(LOG_INFO, "HSWF - Newest file: %s", newestFile);
+	blog(LOG_INFO, "HSWF - Newest file: %s", newestFilePath);
 	
 	sensor->hotkey = obs_hotkey_register_source(
 		context,

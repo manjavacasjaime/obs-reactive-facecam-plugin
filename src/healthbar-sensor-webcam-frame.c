@@ -44,6 +44,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define POCAEMPTYJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/pocaEmptyJJ.png"
 #define POCAROJAJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/pocaRojaJJ.png"
 
+#define CAYENDODUOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/cayendoDuos.png"
+#define CAYENDOTRIOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/cayendoTrios.png"
+#define CURANDOTRIOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/curandoTrios.png"
+#define ESCUDODUOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/escudoDuos.png"
+#define ESCUDOTRIOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/escudoTrios.png"
+#define POCAVIDADUOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/pocaVidaDuos.png"
+#define POCAVIDATRIOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/pocaVidaTrios.png"
+#define REANIMANDOTRIOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/reanimandoTrios.png"
+
 
 struct json_object *parsed_json;
 struct json_object *isImageIdentified;

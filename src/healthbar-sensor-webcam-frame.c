@@ -288,7 +288,6 @@ static void hswf_media_start(struct healthbar_sensor_webcam_frame *sensor)
 void change_webcam_frame_to_file(struct healthbar_sensor_webcam_frame *sensor,
 				char *newFramePath)
 {
-
 	if (sensor->media_valid) {
 		mp_media_free(&sensor->media);
 		sensor->media_valid = false;
@@ -298,7 +297,7 @@ void change_webcam_frame_to_file(struct healthbar_sensor_webcam_frame *sensor,
 	sensor->framePath = newFramePath ? bstrdup(newFramePath) : NULL;
 
 	bool active = obs_source_active(sensor->context);
-	if(active) {
+	if (active) {
 		hswf_media_open(sensor);
 		hswf_media_start(sensor);
 	}
@@ -376,6 +375,8 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 
 static void hswf_update(void *data, obs_data_t *settings)
 {
+	blog(LOG_INFO, "HSWF - ENTERING UPDATE");
+
 	struct healthbar_sensor_webcam_frame *sensor = data;
 	bfree(sensor->framePath);
 	char *framePath = GREENCAMFRAME;
@@ -395,15 +396,19 @@ static void hswf_update(void *data, obs_data_t *settings)
 	}
 
 	bool active = obs_source_active(sensor->context);
-	if(active) {
+	if (active) {
 		hswf_media_open(sensor);
 		hswf_media_start(sensor);
 	}
+
+	blog(LOG_INFO, "HSWF - EXITING UPDATE");
 }
 
 static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 {
 	UNUSED_PARAMETER(settings);
+
+	blog(LOG_INFO, "HSWF - ENTERING CREATE");
 
 	struct healthbar_sensor_webcam_frame *sensor =
 		bzalloc(sizeof(struct healthbar_sensor_webcam_frame));
@@ -414,6 +419,7 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 
 	obs_source_t *currentScene = obs_frontend_get_current_scene();
 	sensor->currentScene = currentScene;
+	obs_source_release(currentScene);
 
 	const char *screenshotPath = obs_frontend_get_current_record_output_path();
 	if (sensor->screenshotPath)
@@ -447,12 +453,15 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 		sensor
 	);
 
+	blog(LOG_INFO, "HSWF - EXITING CREATE");
+
 	hswf_update(sensor, settings);
 	return sensor;
 }
 
 static void hswf_destroy(void *data)
 {
+	blog(LOG_INFO, "HSWF - ENTERING DESTROY");
 	struct healthbar_sensor_webcam_frame *sensor = data;
 
 	if (sensor->hotkey)
@@ -471,8 +480,9 @@ static void hswf_destroy(void *data)
 		curl_easy_cleanup(sensor->curl);
 
 	bfree(sensor->framePath);
-	obs_source_release(sensor->currentScene);
 	sem_destroy(&sensor->mutex);
+
+	blog(LOG_INFO, "HSWF - EXITING DESTROY");
 	bfree(sensor);
 }
 
@@ -632,7 +642,7 @@ static void hswf_mouse_click(void *data, const struct obs_mouse_event *event,
 	sensor->framePath = framePath ? bstrdup(framePath) : NULL;
 
 	bool active = obs_source_active(sensor->context);
-	if(active) {
+	if (active) {
 		hswf_media_open(sensor);
 		hswf_media_start(sensor);
 	}

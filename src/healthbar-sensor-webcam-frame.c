@@ -492,8 +492,13 @@ static void hswf_tick(void *data, float seconds)
 
 	struct healthbar_sensor_webcam_frame *sensor = data;
 
-	pthread_t thread;
-    pthread_create(&thread, NULL, thread_take_screenshot_and_send_to_api, (void*) sensor);
+	int value;
+    sem_getvalue(&sensor->mutex, &value);
+
+	if (value == 1) {
+		pthread_t thread;
+    	pthread_create(&thread, NULL, thread_take_screenshot_and_send_to_api, (void*) sensor);
+	}
 }
 
 static obs_missing_files_t *hswf_missingfiles(void *data)

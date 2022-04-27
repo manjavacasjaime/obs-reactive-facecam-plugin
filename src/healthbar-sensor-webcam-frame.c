@@ -313,14 +313,14 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 	blog(LOG_INFO, "HSWF - semaphore: Entered...");
   
     //critical section
-    obs_frontend_take_source_screenshot(my_sensor->currentScene);
+    //obs_frontend_take_source_screenshot(my_sensor->currentScene);
 	
 	//get last file from screenshotPath
-	ftw(my_sensor->screenshotPath, check_if_newer_file, 1);
-	blog(LOG_INFO, "HSWF - Newest file: %s", newestFilePath);
+	//ftw(my_sensor->screenshotPath, check_if_newer_file, 1);
+	//blog(LOG_INFO, "HSWF - Newest file: %s", newestFilePath);
 
 	FILE *fd;
-  	fd = fopen(newestFilePath, "rb");
+  	fd = fopen(CURANDOJJ, "rb");
 
 	my_sensor->curl = curl_easy_init();
 
@@ -344,7 +344,7 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 	}
 
 	fclose(fd);
-	remove(newestFilePath);
+	//remove(newestFilePath);
 
 	char *ptr;
 	bool isImgId = false;

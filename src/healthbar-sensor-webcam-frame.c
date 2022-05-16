@@ -78,7 +78,7 @@ struct healthbar_sensor_webcam_frame {
 	//0 is green, 1 is red
 	int currentFrame;
 	
-	obs_source_t *currentScene;
+	obs_source_t *game_capture_source;
 	char *screenshotPath;
 	CURL *curl;
 
@@ -314,7 +314,7 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 	blog(LOG_INFO, "HSWF - semaphore: Entered...");
   
     //critical section
-    //obs_frontend_take_source_screenshot(my_sensor->currentScene);
+    //obs_frontend_take_source_screenshot(my_sensor->game_capture_source);
 	
 	//get last file from screenshotPath
 	//ftw(my_sensor->screenshotPath, check_if_newer_file, 1);
@@ -418,9 +418,18 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	sem_init(&sensor->mutex, 0, 1);
 	sensor->currentFrame = 0;
 
-	obs_source_t *currentScene = obs_frontend_get_current_scene();
-	sensor->currentScene = currentScene;
-	obs_source_release(currentScene);
+	obs_source_t *current_scene_source = obs_frontend_get_current_scene();
+	if (current_scene_source) {
+		obs_scene_t *current_scene = obs_scene_from_source(current_scene_source);
+		obs_sceneitem_t *game_capture_item = obs_scene_find_source(current_scene, "Captura de juego");
+
+		if (game_capture_item) {
+			obs_source_t *game_capture_source = obs_sceneitem_get_source(game_capture_item);
+			
+			sensor->game_capture_source = game_capture_source;
+		}
+		obs_source_release(current_scene_source);
+	}
 
 	const char *screenshotPath = obs_frontend_get_current_record_output_path();
 	if (sensor->screenshotPath)

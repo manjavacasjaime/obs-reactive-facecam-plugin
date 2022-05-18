@@ -69,6 +69,14 @@ struct healthbar_sensor_webcam_frame {
 	mp_media_t media;
 	bool media_valid;
 
+	uint8_t *data;
+	uint32_t linesize;
+
+	uint32_t width;
+	uint32_t height;
+	gs_texrender_t *texrender;
+	gs_texture_t *staging_texture;
+
 	char *framePath;
 	
 	char *text;
@@ -304,6 +312,122 @@ void change_webcam_frame_to_file(struct healthbar_sensor_webcam_frame *sensor,
 	}
 }
 
+void render_game_capture(struct healthbar_sensor_webcam_frame *sensor) {
+	blog(LOG_INFO, "HSWF - ENTERING RENDER");
+
+	if (!sensor->game_capture_source) {
+		return;
+	}
+
+	blog(LOG_INFO, "HSWF - RENDER 1");
+	obs_enter_graphics();
+
+	gs_texrender_reset(sensor->texrender);
+	blog(LOG_INFO, "HSWF - RENDER 1.1");
+
+	gs_blend_state_push();
+	blog(LOG_INFO, "HSWF - RENDER 1.2");
+	gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
+	blog(LOG_INFO, "HSWF - RENDER 1.3");
+
+	if (gs_texrender_begin(sensor->texrender, sensor->width,
+			       sensor->height)) {
+		blog(LOG_INFO, "HSWF - RENDER 2");
+		struct vec4 clear_color;
+
+		blog(LOG_INFO, "HSWF - RENDER 2.1");
+		vec4_zero(&clear_color);
+		blog(LOG_INFO, "HSWF - RENDER 2.2");
+		gs_clear(GS_CLEAR_COLOR, &clear_color, 0.0f, 0);
+		blog(LOG_INFO, "HSWF - RENDER 2.3");
+		gs_ortho(0.0f, (float) sensor->width, 0.0f,
+			 (float) sensor->height, -100.0f, 100.0f);
+		blog(LOG_INFO, "HSWF - RENDER 2.4");
+
+		
+		obs_source_video_render(sensor->game_capture_source);
+		blog(LOG_INFO, "HSWF - RENDER 2.5");
+
+		gs_texrender_end(sensor->texrender);
+		blog(LOG_INFO, "HSWF - RENDER 3");
+	}
+
+	gs_blend_state_pop();
+
+	gs_effect_t *effect2 = obs_get_base_effect(OBS_EFFECT_DEFAULT);
+	gs_texture_t *tex = gs_texrender_get_texture(sensor->texrender);
+
+	blog(LOG_INFO, "HSWF - RENDER 4");
+
+	if (tex) {
+		blog(LOG_INFO, "HSWF - RENDER 5");
+		gs_stage_texture(sensor->staging_texture, tex);
+
+		uint8_t *data;
+		uint32_t linesize;
+		blog(LOG_INFO, "HSWF - RENDER 6");
+		if (gs_stagesurface_map(sensor->staging_texture, &data,
+					&linesize)) {
+			memcpy(sensor->data, data, linesize * sensor->height);
+			sensor->linesize = linesize;
+
+			gs_stagesurface_unmap(sensor->staging_texture);
+		}
+		blog(LOG_INFO, "HSWF - RENDER 7");
+
+		gs_eparam_t *image =
+			gs_effect_get_param_by_name(effect2, "image");
+		gs_effect_set_texture(image, tex);
+
+		blog(LOG_INFO, "HSWF - RENDER 8");
+
+		while (gs_effect_loop(effect2, "Draw"))
+			gs_draw_sprite(tex, 0, sensor->width, sensor->height);
+	}
+
+	obs_leave_graphics();
+	blog(LOG_INFO, "HSWF - EXITING RENDER");
+}
+
+void send_data_to_api(struct healthbar_sensor_webcam_frame *sensor) {
+	uint8_t *data = bzalloc(sensor->linesize * sensor->height);
+	memcpy(data, sensor->data, sensor->linesize * sensor->height);
+
+	FILE *of = fopen(RAWSCREENSHOT, "wb");
+	if (of != NULL) {
+		fwrite(data, 1, sensor->linesize * sensor->height, of);
+		fclose(of);
+	}
+
+	bfree(data);
+
+	FILE *fd;
+  	fd = fopen(RAWSCREENSHOT, "rb");
+	
+	sensor->curl = curl_easy_init();
+
+	if (sensor->curl) {
+		curl_easy_setopt(sensor->curl, CURLOPT_URL, API_URL);
+		curl_easy_setopt(sensor->curl, CURLOPT_UPLOAD, 1L);
+		curl_easy_setopt(sensor->curl, CURLOPT_READFUNCTION, read_callback);
+		curl_easy_setopt(sensor->curl, CURLOPT_READDATA, fd);
+		curl_easy_setopt(sensor->curl, CURLOPT_CUSTOMREQUEST, "POST");
+		curl_easy_setopt(sensor->curl, CURLOPT_WRITEFUNCTION, got_data_from_api);
+
+		CURLcode result = curl_easy_perform(sensor->curl);
+		
+		if (result == CURLE_OK) {
+			blog(LOG_INFO, "HSWF - CURL result working");
+		} else {
+			blog(LOG_INFO, "HSWF - CURL error: %s", curl_easy_strerror(result));
+		}
+	} else {
+		blog(LOG_INFO, "HSWF - CURL init failed");
+	}
+
+	fclose(fd);
+}
+
 void *thread_take_screenshot_and_send_to_api(void *sensor)
 {
     struct healthbar_sensor_webcam_frame *my_sensor =
@@ -320,31 +444,9 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 	//ftw(my_sensor->screenshotPath, check_if_newer_file, 1);
 	//blog(LOG_INFO, "HSWF - Newest file: %s", newestFilePath);
 
-	FILE *fd;
-  	fd = fopen(RAWSCREENSHOT, "rb");
+	render_game_capture(my_sensor);
+	send_data_to_api(my_sensor);
 
-	my_sensor->curl = curl_easy_init();
-
-	if (my_sensor->curl) {
-		curl_easy_setopt(my_sensor->curl, CURLOPT_URL, API_URL);
-		curl_easy_setopt(my_sensor->curl, CURLOPT_UPLOAD, 1L);
-		curl_easy_setopt(my_sensor->curl, CURLOPT_READFUNCTION, read_callback);
-		curl_easy_setopt(my_sensor->curl, CURLOPT_READDATA, fd);
-		curl_easy_setopt(my_sensor->curl, CURLOPT_CUSTOMREQUEST, "POST");
-		curl_easy_setopt(my_sensor->curl, CURLOPT_WRITEFUNCTION, got_data_from_api);
-
-		CURLcode result = curl_easy_perform(my_sensor->curl);
-		
-		if (result == CURLE_OK) {
-			blog(LOG_INFO, "HSWF - CURL result working");
-		} else {
-			blog(LOG_INFO, "HSWF - CURL error: %s", curl_easy_strerror(result));
-		}
-	} else {
-		blog(LOG_INFO, "HSWF - CURL init failed");
-	}
-
-	fclose(fd);
 	//remove(newestFilePath);
 
 	char *ptr;
@@ -427,9 +529,19 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 			obs_source_t *game_capture_source = obs_sceneitem_get_source(game_capture_item);
 			
 			sensor->game_capture_source = game_capture_source;
+			sensor->width = obs_source_get_width(game_capture_source);
+			sensor->height = obs_source_get_height(game_capture_source);
 		}
 		obs_source_release(current_scene_source);
 	}
+
+	obs_enter_graphics();
+	sensor->texrender = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
+	sensor->staging_texture = gs_stagesurface_create(
+			sensor->width, sensor->height, GS_RGBA);
+	obs_leave_graphics();
+
+	sensor->data = bzalloc((sensor->width + 32) * sensor->height * 4);
 
 	const char *screenshotPath = obs_frontend_get_current_record_output_path();
 	if (sensor->screenshotPath)
@@ -488,6 +600,19 @@ static void hswf_destroy(void *data)
 
 	if (sensor->curl)
 		curl_easy_cleanup(sensor->curl);
+
+	obs_enter_graphics();
+	gs_texrender_destroy(sensor->texrender);
+
+	if (sensor->staging_texture) {
+		gs_stagesurface_destroy(sensor->staging_texture);
+	}
+
+	obs_leave_graphics();
+
+	if (sensor->data) {
+		bfree(sensor->data);
+	}
 
 	bfree(sensor->framePath);
 	sem_destroy(&sensor->mutex);

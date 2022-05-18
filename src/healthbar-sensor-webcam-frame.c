@@ -85,6 +85,8 @@ struct healthbar_sensor_webcam_frame {
 	sem_t mutex;
 	//0 is green, 1 is red
 	int currentFrame;
+	bool is_on_destroy;
+	bool is_on_sleep;
 	
 	obs_source_t *game_capture_source;
 	CURL *curl;
@@ -436,7 +438,11 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 		}
 	}
       
-    sleep(4);
+    if (!my_sensor->is_on_destroy) {
+		my_sensor->is_on_sleep = true;
+		sleep(2);
+		my_sensor->is_on_sleep = false;
+	}
 	//signal
 	blog(LOG_INFO, "HSWF - semaphore: Just Exiting...");
     sem_post(&my_sensor->mutex);
@@ -485,6 +491,8 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 
 	sem_init(&sensor->mutex, 0, 1);
 	sensor->currentFrame = 0;
+	sensor->is_on_destroy = false;
+	sensor->is_on_sleep = false;
 
 	obs_source_t *current_scene_source = obs_frontend_get_current_scene();
 	if (current_scene_source) {
@@ -546,6 +554,10 @@ static void hswf_destroy(void *data)
 	blog(LOG_INFO, "HSWF - ENTERING DESTROY");
 	struct healthbar_sensor_webcam_frame *sensor = data;
 
+	sensor->is_on_destroy = true;
+	if(!sensor->is_on_sleep)
+		sem_wait(&sensor->mutex);
+
 	if (sensor->hotkey)
 		obs_hotkey_unregister(sensor->hotkey);
 
@@ -570,6 +582,10 @@ static void hswf_destroy(void *data)
 		bfree(sensor->data);
 
 	bfree(sensor->framePath);
+
+	if(!sensor->is_on_sleep)
+		sem_post(&sensor->mutex);
+
 	sem_destroy(&sensor->mutex);
 
 	blog(LOG_INFO, "HSWF - EXITING DESTROY");
@@ -585,7 +601,7 @@ static void hswf_tick(void *data, float seconds)
 	int value;
     sem_getvalue(&sensor->mutex, &value);
 
-	if (value == 1) {
+	if (value == 1 && !sensor->is_on_destroy) {
 		pthread_t thread;
     	pthread_create(&thread, NULL, thread_take_screenshot_and_send_to_api, (void*) sensor);
 	}

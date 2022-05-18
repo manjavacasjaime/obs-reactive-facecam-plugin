@@ -440,7 +440,7 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
       
     if (!my_sensor->is_on_destroy) {
 		my_sensor->is_on_sleep = true;
-		sleep(2);
+		sleep(1);
 		my_sensor->is_on_sleep = false;
 	}
 	//signal

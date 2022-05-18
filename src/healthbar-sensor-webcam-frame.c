@@ -87,7 +87,6 @@ struct healthbar_sensor_webcam_frame {
 	int currentFrame;
 	
 	obs_source_t *game_capture_source;
-	char *screenshotPath;
 	CURL *curl;
 
 	enum obs_media_state state;
@@ -312,44 +311,29 @@ void change_webcam_frame_to_file(struct healthbar_sensor_webcam_frame *sensor,
 	}
 }
 
-void render_game_capture(struct healthbar_sensor_webcam_frame *sensor) {
-	blog(LOG_INFO, "HSWF - ENTERING RENDER");
-
+void render_game_capture(struct healthbar_sensor_webcam_frame *sensor) 
+{
 	if (!sensor->game_capture_source) {
 		return;
 	}
 
-	blog(LOG_INFO, "HSWF - RENDER 1");
 	obs_enter_graphics();
 
 	gs_texrender_reset(sensor->texrender);
-	blog(LOG_INFO, "HSWF - RENDER 1.1");
-
 	gs_blend_state_push();
-	blog(LOG_INFO, "HSWF - RENDER 1.2");
 	gs_blend_function(GS_BLEND_ONE, GS_BLEND_ZERO);
-	blog(LOG_INFO, "HSWF - RENDER 1.3");
 
-	if (gs_texrender_begin(sensor->texrender, sensor->width,
-			       sensor->height)) {
-		blog(LOG_INFO, "HSWF - RENDER 2");
+	if (gs_texrender_begin(sensor->texrender, sensor->width, sensor->height)) {
 		struct vec4 clear_color;
 
-		blog(LOG_INFO, "HSWF - RENDER 2.1");
 		vec4_zero(&clear_color);
-		blog(LOG_INFO, "HSWF - RENDER 2.2");
 		gs_clear(GS_CLEAR_COLOR, &clear_color, 0.0f, 0);
-		blog(LOG_INFO, "HSWF - RENDER 2.3");
 		gs_ortho(0.0f, (float) sensor->width, 0.0f,
-			 (float) sensor->height, -100.0f, 100.0f);
-		blog(LOG_INFO, "HSWF - RENDER 2.4");
+			(float) sensor->height, -100.0f, 100.0f);
 
 		
 		obs_source_video_render(sensor->game_capture_source);
-		blog(LOG_INFO, "HSWF - RENDER 2.5");
-
 		gs_texrender_end(sensor->texrender);
-		blog(LOG_INFO, "HSWF - RENDER 3");
 	}
 
 	gs_blend_state_pop();
@@ -357,39 +341,30 @@ void render_game_capture(struct healthbar_sensor_webcam_frame *sensor) {
 	gs_effect_t *effect2 = obs_get_base_effect(OBS_EFFECT_DEFAULT);
 	gs_texture_t *tex = gs_texrender_get_texture(sensor->texrender);
 
-	blog(LOG_INFO, "HSWF - RENDER 4");
-
 	if (tex) {
-		blog(LOG_INFO, "HSWF - RENDER 5");
 		gs_stage_texture(sensor->staging_texture, tex);
 
 		uint8_t *data;
 		uint32_t linesize;
-		blog(LOG_INFO, "HSWF - RENDER 6");
-		if (gs_stagesurface_map(sensor->staging_texture, &data,
-					&linesize)) {
+		if (gs_stagesurface_map(sensor->staging_texture, &data, &linesize)) {
 			memcpy(sensor->data, data, linesize * sensor->height);
 			sensor->linesize = linesize;
 
 			gs_stagesurface_unmap(sensor->staging_texture);
 		}
-		blog(LOG_INFO, "HSWF - RENDER 7");
 
-		gs_eparam_t *image =
-			gs_effect_get_param_by_name(effect2, "image");
+		gs_eparam_t *image = gs_effect_get_param_by_name(effect2, "image");
 		gs_effect_set_texture(image, tex);
-
-		blog(LOG_INFO, "HSWF - RENDER 8");
 
 		while (gs_effect_loop(effect2, "Draw"))
 			gs_draw_sprite(tex, 0, sensor->width, sensor->height);
 	}
 
 	obs_leave_graphics();
-	blog(LOG_INFO, "HSWF - EXITING RENDER");
 }
 
-void send_data_to_api(struct healthbar_sensor_webcam_frame *sensor) {
+void send_data_to_api(struct healthbar_sensor_webcam_frame *sensor) 
+{
 	uint8_t *data = bzalloc(sensor->linesize * sensor->height);
 	memcpy(data, sensor->data, sensor->linesize * sensor->height);
 
@@ -436,18 +411,9 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 	//wait
     sem_wait(&my_sensor->mutex);
 	blog(LOG_INFO, "HSWF - semaphore: Entered...");
-  
-    //critical section
-    //obs_frontend_take_source_screenshot(my_sensor->game_capture_source);
-	
-	//get last file from screenshotPath
-	//ftw(my_sensor->screenshotPath, check_if_newer_file, 1);
-	//blog(LOG_INFO, "HSWF - Newest file: %s", newestFilePath);
 
 	render_game_capture(my_sensor);
 	send_data_to_api(my_sensor);
-
-	//remove(newestFilePath);
 
 	char *ptr;
 	bool isImgId = false;
@@ -542,12 +508,6 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	obs_leave_graphics();
 
 	sensor->data = bzalloc((sensor->width + 32) * sensor->height * 4);
-
-	const char *screenshotPath = obs_frontend_get_current_record_output_path();
-	if (sensor->screenshotPath)
-		bfree(sensor->screenshotPath);
-	sensor->screenshotPath = bstrdup(screenshotPath);
-	bfree((void *) screenshotPath);
 	
 	sensor->hotkey = obs_hotkey_register_source(
 		context,
@@ -595,24 +555,19 @@ static void hswf_destroy(void *data)
 	if (sensor->text)
 		bfree(sensor->text);
 
-	if (sensor->screenshotPath)
-		bfree(sensor->screenshotPath);
-
 	if (sensor->curl)
 		curl_easy_cleanup(sensor->curl);
 
 	obs_enter_graphics();
 	gs_texrender_destroy(sensor->texrender);
 
-	if (sensor->staging_texture) {
+	if (sensor->staging_texture)
 		gs_stagesurface_destroy(sensor->staging_texture);
-	}
 
 	obs_leave_graphics();
 
-	if (sensor->data) {
+	if (sensor->data)
 		bfree(sensor->data);
-	}
 
 	bfree(sensor->framePath);
 	sem_destroy(&sensor->mutex);

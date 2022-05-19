@@ -365,8 +365,9 @@ void render_game_capture(struct healthbar_sensor_webcam_frame *sensor)
 	obs_leave_graphics();
 }
 
-void send_data_to_api(struct healthbar_sensor_webcam_frame *sensor) 
+bool send_data_to_api(struct healthbar_sensor_webcam_frame *sensor) 
 {
+	bool success = false;
 	uint8_t *data = bzalloc(sensor->linesize * sensor->height);
 	memcpy(data, sensor->data, sensor->linesize * sensor->height);
 
@@ -394,6 +395,7 @@ void send_data_to_api(struct healthbar_sensor_webcam_frame *sensor)
 		CURLcode result = curl_easy_perform(sensor->curl);
 		
 		if (result == CURLE_OK) {
+			success = true;
 			blog(LOG_INFO, "HSWF - CURL result working");
 		} else {
 			blog(LOG_INFO, "HSWF - CURL error: %s", curl_easy_strerror(result));
@@ -403,6 +405,7 @@ void send_data_to_api(struct healthbar_sensor_webcam_frame *sensor)
 	}
 
 	fclose(fd);
+	return success;
 }
 
 void *thread_take_screenshot_and_send_to_api(void *sensor)
@@ -415,32 +418,35 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 	blog(LOG_INFO, "HSWF - semaphore: Entered...");
 
 	render_game_capture(my_sensor);
-	send_data_to_api(my_sensor);
+	bool success = send_data_to_api(my_sensor);
+	int sleep_time = success ? 1 : 4;
 
-	char *ptr;
-	bool isImgId = false;
-	bool isLBFound = false;
-	double lifePerc = 0.0;
+	if (success) {
+		char *ptr;
+		bool isImgId = false;
+		bool isLBFound = false;
+		double lifePerc = 0.0;
 
-	if (isImageIdentified && isLifeBarFound && lifePercentage) {
-		isImgId = json_object_get_boolean(isImageIdentified);
-		isLBFound = json_object_get_boolean(isLifeBarFound);
-		lifePerc = strtod(json_object_get_string(lifePercentage), &ptr);
-	}
+		if (isImageIdentified && isLifeBarFound && lifePercentage) {
+			isImgId = json_object_get_boolean(isImageIdentified);
+			isLBFound = json_object_get_boolean(isLifeBarFound);
+			lifePerc = strtod(json_object_get_string(lifePercentage), &ptr);
+		}
 
-	if (isImgId && isLBFound) {
-		if (lifePerc > 0.5 && my_sensor->currentFrame != 0) {
-			change_webcam_frame_to_file(my_sensor, GREENCAMFRAME);
-			my_sensor-> currentFrame = 0;
-		} else if (lifePerc <= 0.5 && my_sensor->currentFrame != 1) {
-			change_webcam_frame_to_file(my_sensor, REDCAMFRAME);
-			my_sensor-> currentFrame = 1;
+		if (isImgId && isLBFound) {
+			if (lifePerc > 0.5 && my_sensor->currentFrame != 0) {
+				change_webcam_frame_to_file(my_sensor, GREENCAMFRAME);
+				my_sensor-> currentFrame = 0;
+			} else if (lifePerc <= 0.5 && my_sensor->currentFrame != 1) {
+				change_webcam_frame_to_file(my_sensor, REDCAMFRAME);
+				my_sensor-> currentFrame = 1;
+			}
 		}
 	}
       
     if (!my_sensor->is_on_destroy) {
 		my_sensor->is_on_sleep = true;
-		sleep(1);
+		sleep(sleep_time);
 		my_sensor->is_on_sleep = false;
 	}
 	//signal
@@ -489,6 +495,8 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 		bzalloc(sizeof(struct healthbar_sensor_webcam_frame));
 	sensor->context = context;
 
+	curl_global_init(0);
+	
 	sem_init(&sensor->mutex, 0, 1);
 	sensor->currentFrame = 0;
 	sensor->is_on_destroy = false;
@@ -569,6 +577,7 @@ static void hswf_destroy(void *data)
 
 	if (sensor->curl)
 		curl_easy_cleanup(sensor->curl);
+	curl_global_cleanup();
 
 	obs_enter_graphics();
 	gs_texrender_destroy(sensor->texrender);

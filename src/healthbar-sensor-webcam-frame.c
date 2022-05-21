@@ -24,8 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <media-playback/media.h>
 #include <obs-frontend-api.h>
 #include <curl/curl.h>
-#include <time.h>
-#include <ftw.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -62,9 +60,6 @@ struct json_object *isImageIdentified;
 struct json_object *errorMessage;
 struct json_object *isLifeBarFound;
 struct json_object *lifePercentage;
-
-time_t newestFileTime = 0;
-char newestFilePath[PATH_MAX];
 
 struct healthbar_sensor_webcam_frame {
 	obs_source_t *context;
@@ -105,16 +100,6 @@ bool json_object_object_get_ex(const struct json_object *obj, const char *key,
 const char *json_object_get_string(struct json_object *jso);
 bool json_object_get_boolean(const struct json_object *jso);
 int json_object_put(struct json_object *jso);
-
-int check_if_newer_file(const char *path, const struct stat *sb, int typeflag)
-{
-    if (typeflag == FTW_F && sb->st_mtime > newestFileTime) {
-        newestFileTime = sb->st_mtime;
-        strncpy(newestFilePath, path, PATH_MAX);
-    }
-
-	return 0;
-}
 
 size_t got_data_from_api(char *buffer, size_t itemsize, size_t nitems, void* ignorethis)
 {
@@ -748,14 +733,12 @@ static void hswf_defaults(obs_data_t *settings)
 //.output_flags = OBS_SOURCE_ASYNC_VIDEO,
 //solo este flag hace que se crashee a veces
 //quizas es porque necesita los hotkey methods
-//En cuanto quite el mouse_click, OBS_SOURCE_INTERACTION se va
 struct obs_source_info healthbar_sensor_webcam_frame = {
 	.id = "healthbar_sensor_webcam_frame",
 	.type = OBS_SOURCE_TYPE_INPUT,
 	.output_flags = OBS_SOURCE_ASYNC_VIDEO |
 			OBS_SOURCE_DO_NOT_DUPLICATE |
-			OBS_SOURCE_CONTROLLABLE_MEDIA |
-			OBS_SOURCE_INTERACTION,
+			OBS_SOURCE_CONTROLLABLE_MEDIA,
 	.get_name = hswf_getname,
 	.update = hswf_update,
 	.create = hswf_create,

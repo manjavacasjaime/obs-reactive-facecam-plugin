@@ -30,10 +30,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <pthread.h>
 #include <semaphore.h>
 
-#define GREENCAMFRAME  (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
-#define REDCAMFRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/RedMarco02.webm"
-#define TESTIMAGE (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/testImage.png"
 #define API_URL (char *)"http://127.0.0.1:8080/post"
+
+#define NO_LIFEBAR_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
+#define HIGH_LIFE_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco01.webm"
+#define MEDIUM_LIFE_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco02.webm"
+#define LOW_LIFE_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco03.webm"
 
 #define BUSCARJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/buscarJJ.png"
 #define CURANDOJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/curandoJJ.png"
@@ -83,7 +85,7 @@ struct healthbar_sensor_webcam_frame {
 	int someNumber;
 
 	sem_t mutex;
-	//0 is green, 1 is red
+	//0 is default, 1 is green, 2 is orange and 3 is red
 	int currentFrame;
 	bool is_on_destroy;
 	bool is_on_sleep;
@@ -433,13 +435,21 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 			lifePerc = strtod(json_object_get_string(lifePercentage), &ptr);
 		}
 
-		if (isImgId && isLBFound) {
-			if (lifePerc > 0.5 && my_sensor->currentFrame != 0) {
-				change_webcam_frame_to_file(my_sensor, GREENCAMFRAME);
-				my_sensor-> currentFrame = 0;
-			} else if (lifePerc <= 0.5 && my_sensor->currentFrame != 1) {
-				change_webcam_frame_to_file(my_sensor, REDCAMFRAME);
-				my_sensor-> currentFrame = 1;
+		if (isImgId) {
+			if (isLBFound) {
+				if (lifePerc > 0.66 && my_sensor->currentFrame != 1) {
+					change_webcam_frame_to_file(my_sensor, HIGH_LIFE_DEFAULT_FRAME);
+					my_sensor->currentFrame = 1;
+				} else if (lifePerc > 0.33 && lifePerc <= 0.66 && my_sensor->currentFrame != 2) {
+					change_webcam_frame_to_file(my_sensor, MEDIUM_LIFE_DEFAULT_FRAME);
+					my_sensor->currentFrame = 2;
+				} else if (lifePerc <= 0.33 && my_sensor->currentFrame != 3) {
+					change_webcam_frame_to_file(my_sensor, LOW_LIFE_DEFAULT_FRAME);
+					my_sensor->currentFrame = 3;
+				}
+			} else if (my_sensor->currentFrame != 0) {
+				change_webcam_frame_to_file(my_sensor, NO_LIFEBAR_DEFAULT_FRAME);
+				my_sensor->currentFrame = 0;
 			}
 		}
 	}
@@ -459,13 +469,10 @@ static void hswf_update(void *data, obs_data_t *settings)
 	blog(LOG_INFO, "HSWF - ENTERING UPDATE");
 
 	struct healthbar_sensor_webcam_frame *sensor = data;
-	bfree(sensor->framePath);
-	char *framePath = GREENCAMFRAME;
 
 	const char *text = obs_data_get_string(settings, "text");
 	const int someNumber = obs_data_get_int(settings, "someNumber");
 
-	sensor->framePath = framePath ? bstrdup(framePath) : NULL;
 	if (sensor->text)
 		bfree(sensor->text);
 	sensor->text = bstrdup(text);
@@ -498,9 +505,12 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	curl_global_init(0);
 	
 	sem_init(&sensor->mutex, 0, 1);
-	sensor->currentFrame = 0;
 	sensor->is_on_destroy = false;
 	sensor->is_on_sleep = false;
+
+	char *framePath = NO_LIFEBAR_DEFAULT_FRAME;
+	sensor->framePath = framePath ? bstrdup(framePath) : NULL;
+	sensor->currentFrame = 0;
 
 	obs_source_t *current_scene_source = obs_frontend_get_current_scene();
 	if (current_scene_source) {
@@ -734,40 +744,6 @@ static void hswf_defaults(obs_data_t *settings)
 	obs_data_set_default_int(settings, "someNumber", 400);
 }
 
-static void hswf_mouse_click(void *data, const struct obs_mouse_event *event,
-				int32_t type, bool mouse_up, uint32_t click_count)
-{
-	UNUSED_PARAMETER(event);
-	UNUSED_PARAMETER(type);
-	UNUSED_PARAMETER(click_count);
-	
-	if (mouse_up)
-		return;
-
-	struct healthbar_sensor_webcam_frame *sensor = data;
-	char *framePath;
-
-	if (strcmp(sensor->framePath, GREENCAMFRAME) == 0) {
-		framePath = REDCAMFRAME;
-	} else {
-		framePath = GREENCAMFRAME;
-	}
-
-	if (sensor->media_valid) {
-		mp_media_free(&sensor->media);
-		sensor->media_valid = false;
-	}
-
-	bfree(sensor->framePath);
-	sensor->framePath = framePath ? bstrdup(framePath) : NULL;
-
-	bool active = obs_source_active(sensor->context);
-	if (active) {
-		hswf_media_open(sensor);
-		hswf_media_start(sensor);
-	}
-}
-
 
 //.output_flags = OBS_SOURCE_ASYNC_VIDEO,
 //solo este flag hace que se crashee a veces
@@ -798,5 +774,4 @@ struct obs_source_info healthbar_sensor_webcam_frame = {
 	.get_properties = hswf_properties,
 	.get_defaults = hswf_defaults,
 	.icon_type = OBS_ICON_TYPE_UNKNOWN,
-	.mouse_click = hswf_mouse_click,
 };

@@ -74,14 +74,15 @@ struct healthbar_sensor_webcam_frame {
 	gs_texrender_t *texrender;
 	gs_texture_t *staging_texture;
 
-	char *framePath;
+	char *frame_path;
 	
 	char *text;
 	int someNumber;
 
 	sem_t mutex;
 	//0 is default, 1 is green, 2 is orange and 3 is red
-	int currentFrame;
+	int current_frame;
+	int no_lifebar_found_counter;
 	bool is_on_destroy;
 	bool is_on_sleep;
 	
@@ -247,7 +248,7 @@ static void media_stopped(void *opaque)
 
 static void hswf_media_open(struct healthbar_sensor_webcam_frame *sensor)
 {
-	if (sensor->framePath && *sensor->framePath) {
+	if (sensor->frame_path && *sensor->frame_path) {
 		struct mp_media_info info = {
 			.opaque = sensor,
 			.v_cb = get_frame,
@@ -255,7 +256,7 @@ static void hswf_media_open(struct healthbar_sensor_webcam_frame *sensor)
 			.v_seek_cb = seek_frame,
 			.a_cb = get_audio,
 			.stop_cb = media_stopped,
-			.path = sensor->framePath,
+			.path = sensor->frame_path,
 			.format = NULL,
 			.buffering = 2 * 1024 * 1024,
 			.speed = 100,
@@ -283,15 +284,15 @@ static void hswf_media_start(struct healthbar_sensor_webcam_frame *sensor)
 }
 
 void change_webcam_frame_to_file(struct healthbar_sensor_webcam_frame *sensor,
-				char *newFramePath)
+				char *new_frame_path)
 {
 	if (sensor->media_valid) {
 		mp_media_free(&sensor->media);
 		sensor->media_valid = false;
 	}
 
-	bfree(sensor->framePath);
-	sensor->framePath = newFramePath ? bstrdup(newFramePath) : NULL;
+	bfree(sensor->frame_path);
+	sensor->frame_path = new_frame_path ? bstrdup(new_frame_path) : NULL;
 
 	bool active = obs_source_active(sensor->context);
 	if (active) {
@@ -422,19 +423,28 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 
 		if (isImgId) {
 			if (isLBFound) {
-				if (lifePerc > 0.66 && my_sensor->currentFrame != 1) {
+				if (my_sensor->no_lifebar_found_counter > 0)
+					my_sensor->no_lifebar_found_counter = 0;
+				
+				if (lifePerc > 0.66 && my_sensor->current_frame != 1) {
 					change_webcam_frame_to_file(my_sensor, HIGH_LIFE_DEFAULT_FRAME);
-					my_sensor->currentFrame = 1;
-				} else if (lifePerc > 0.33 && lifePerc <= 0.66 && my_sensor->currentFrame != 2) {
+					my_sensor->current_frame = 1;
+				} else if (lifePerc > 0.33 && lifePerc <= 0.66 && my_sensor->current_frame != 2) {
 					change_webcam_frame_to_file(my_sensor, MEDIUM_LIFE_DEFAULT_FRAME);
-					my_sensor->currentFrame = 2;
-				} else if (lifePerc <= 0.33 && my_sensor->currentFrame != 3) {
+					my_sensor->current_frame = 2;
+				} else if (lifePerc <= 0.33 && my_sensor->current_frame != 3) {
 					change_webcam_frame_to_file(my_sensor, LOW_LIFE_DEFAULT_FRAME);
-					my_sensor->currentFrame = 3;
+					my_sensor->current_frame = 3;
 				}
-			} else if (my_sensor->currentFrame != 0) {
-				change_webcam_frame_to_file(my_sensor, NO_LIFEBAR_DEFAULT_FRAME);
-				my_sensor->currentFrame = 0;
+
+			} else if (my_sensor->current_frame != 0) {
+				my_sensor->no_lifebar_found_counter++;
+
+				if (my_sensor->no_lifebar_found_counter > 6) {
+					my_sensor->no_lifebar_found_counter = 0;
+					change_webcam_frame_to_file(my_sensor, NO_LIFEBAR_DEFAULT_FRAME);
+					my_sensor->current_frame = 0;
+				}
 			}
 		}
 	}
@@ -493,9 +503,10 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	sensor->is_on_destroy = false;
 	sensor->is_on_sleep = false;
 
-	char *framePath = NO_LIFEBAR_DEFAULT_FRAME;
-	sensor->framePath = framePath ? bstrdup(framePath) : NULL;
-	sensor->currentFrame = 0;
+	char *frame_path = NO_LIFEBAR_DEFAULT_FRAME;
+	sensor->frame_path = frame_path ? bstrdup(frame_path) : NULL;
+	sensor->current_frame = 0;
+	sensor->no_lifebar_found_counter = 0;
 
 	obs_source_t *current_scene_source = obs_frontend_get_current_scene();
 	if (current_scene_source) {
@@ -585,7 +596,7 @@ static void hswf_destroy(void *data)
 	if (sensor->data)
 		bfree(sensor->data);
 
-	bfree(sensor->framePath);
+	bfree(sensor->frame_path);
 
 	if(!sensor->is_on_sleep)
 		sem_post(&sensor->mutex);
@@ -616,7 +627,7 @@ static obs_missing_files_t *hswf_missingfiles(void *data)
 	struct healthbar_sensor_webcam_frame *sensor = data;
 	obs_missing_files_t *files = obs_missing_files_create();
 
-	if (strcmp(sensor->framePath, "") != 0 && !os_file_exists(sensor->framePath)) {
+	if (strcmp(sensor->frame_path, "") != 0 && !os_file_exists(sensor->frame_path)) {
 		blog(LOG_INFO, "HSWF - ERROR: missing media file");
 	}
 

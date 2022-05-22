@@ -72,11 +72,10 @@ struct healthbar_sensor_webcam_frame {
 	uint32_t width;
 	uint32_t height;
 	gs_texrender_t *texrender;
-	gs_texture_t *staging_texture;
+	gs_stagesurf_t *staging_texture;
 
 	char *frame_path;
 	
-	char *text;
 	char *no_lifebar_frame_path;
 	char *high_health_frame_path;
 	char *medium_health_frame_path;
@@ -89,6 +88,8 @@ struct healthbar_sensor_webcam_frame {
 	bool is_on_destroy;
 	bool is_on_sleep;
 	
+	obs_scene_t *current_scene;
+	char *game_capture_source_name;
 	obs_source_t *game_capture_source;
 	CURL *curl;
 
@@ -306,10 +307,6 @@ void change_webcam_frame_to_file(struct healthbar_sensor_webcam_frame *sensor,
 
 void render_game_capture(struct healthbar_sensor_webcam_frame *sensor) 
 {
-	if (!sensor->game_capture_source) {
-		return;
-	}
-
 	obs_enter_graphics();
 
 	gs_texrender_reset(sensor->texrender);
@@ -408,8 +405,16 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
     sem_wait(&my_sensor->mutex);
 	blog(LOG_INFO, "HSWF - semaphore: Entered...");
 
-	render_game_capture(my_sensor);
-	bool success = send_data_to_api(my_sensor);
+	bool success = false;
+	blog(LOG_INFO, "HSWF - sem 1");
+	if (obs_source_active(my_sensor->game_capture_source) &&
+				my_sensor->width > 10 && my_sensor->height > 10) {
+		blog(LOG_INFO, "HSWF - sem 2");
+		render_game_capture(my_sensor);
+		blog(LOG_INFO, "HSWF - sem 3");
+		success = send_data_to_api(my_sensor);
+		blog(LOG_INFO, "HSWF - sem 4");
+	}
 	int sleep_time = success ? 1 : 4;
 
 	if (success) {
@@ -468,7 +473,8 @@ static void hswf_update(void *data, obs_data_t *settings)
 
 	struct healthbar_sensor_webcam_frame *sensor = data;
 
-	const char *text = obs_data_get_string(settings, "text");
+	const char *game_capture_source_name =
+			obs_data_get_string(settings, "game_capture_source_name");
 	const char *no_lifebar_frame_path =
 			obs_data_get_string(settings, "no_lifebar_frame_path");
 	const char *high_health_frame_path =
@@ -478,9 +484,31 @@ static void hswf_update(void *data, obs_data_t *settings)
 	const char *low_health_frame_path =
 			obs_data_get_string(settings, "low_health_frame_path");
 
-	if (sensor->text)
-		bfree(sensor->text);
-	sensor->text = bstrdup(text);
+	if (sensor->current_scene) {
+		if (sensor->game_capture_source_name)
+			bfree(sensor->game_capture_source_name);
+		sensor->game_capture_source_name = bstrdup(game_capture_source_name);
+
+		obs_sceneitem_t *game_capture_item =
+				obs_scene_find_source(sensor->current_scene, game_capture_source_name);
+
+		if (game_capture_item) {
+			obs_source_t *game_capture_source = obs_sceneitem_get_source(game_capture_item);
+			
+			sensor->game_capture_source = game_capture_source;
+			sensor->width = obs_source_get_width(game_capture_source);
+			sensor->height = obs_source_get_height(game_capture_source);
+
+			obs_enter_graphics();
+			sensor->staging_texture = gs_stagesurface_create(
+					sensor->width, sensor->height, GS_RGBA);
+			obs_leave_graphics();
+
+			if (sensor->data)
+				bfree(sensor->data);
+			sensor->data = bzalloc((sensor->width + 32) * sensor->height * 4);
+		}
+	}
 
 	if (sensor->frame_path)
 		bfree(sensor->frame_path);
@@ -538,25 +566,14 @@ static void *hswf_create(obs_data_t *settings, obs_source_t *context)
 	obs_source_t *current_scene_source = obs_frontend_get_current_scene();
 	if (current_scene_source) {
 		obs_scene_t *current_scene = obs_scene_from_source(current_scene_source);
-		obs_sceneitem_t *game_capture_item = obs_scene_find_source(current_scene, "Captura de juego");
-
-		if (game_capture_item) {
-			obs_source_t *game_capture_source = obs_sceneitem_get_source(game_capture_item);
-			
-			sensor->game_capture_source = game_capture_source;
-			sensor->width = obs_source_get_width(game_capture_source);
-			sensor->height = obs_source_get_height(game_capture_source);
-		}
+		sensor->current_scene = current_scene;
 		obs_source_release(current_scene_source);
 	}
 
+	//todos los que usen el width se deben mover al update
 	obs_enter_graphics();
 	sensor->texrender = gs_texrender_create(GS_RGBA, GS_ZS_NONE);
-	sensor->staging_texture = gs_stagesurface_create(
-			sensor->width, sensor->height, GS_RGBA);
 	obs_leave_graphics();
-
-	sensor->data = bzalloc((sensor->width + 32) * sensor->height * 4);
 	
 	sensor->hotkey = obs_hotkey_register_source(
 		context,
@@ -605,8 +622,8 @@ static void hswf_destroy(void *data)
 	if (sensor->media_valid)
 		mp_media_free(&sensor->media);
 
-	if (sensor->text)
-		bfree(sensor->text);
+	if (sensor->game_capture_source_name)
+		bfree(sensor->game_capture_source_name);
 	
 	if (sensor->frame_path)
 		bfree(sensor->frame_path);
@@ -767,7 +784,8 @@ static obs_properties_t *hswf_properties(void *data)
 {
 	obs_properties_t *props = obs_properties_create();
 
-	obs_properties_add_text(props, "text", "Texto a mostrar", OBS_TEXT_DEFAULT);
+	obs_properties_add_text(props, "game_capture_source_name",
+			"Name of source where lifebar is found", OBS_TEXT_DEFAULT);
 	obs_properties_add_path(props, "no_lifebar_frame_path",
 			"Webcam frame to show when no lifebar is found",
 			OBS_PATH_FILE, video_filter, NO_LIFEBAR_DEFAULT_FRAME);
@@ -787,7 +805,8 @@ static obs_properties_t *hswf_properties(void *data)
 
 static void hswf_defaults(obs_data_t *settings)
 {
-	obs_data_set_default_string(settings, "text", "Str por defecto");
+	obs_data_set_default_string(settings, "game_capture_source_name",
+			"Captura de juego");
 	obs_data_set_default_string(settings,
 			"no_lifebar_frame_path", NO_LIFEBAR_DEFAULT_FRAME);
 	obs_data_set_default_string(settings,

@@ -419,7 +419,7 @@ void check_for_game_capture_source(struct healthbar_sensor_webcam_frame *sensor)
 		obs_sceneitem_t *game_capture_item = obs_scene_find_source(
 				sensor->current_scene, sensor->game_capture_source_name);
 
-		if (game_capture_item) {
+		if (game_capture_item && obs_sceneitem_visible(game_capture_item)) {
 			obs_source_t *game_capture_source = obs_sceneitem_get_source(game_capture_item);
 			
 			sensor->game_capture_source = game_capture_source;

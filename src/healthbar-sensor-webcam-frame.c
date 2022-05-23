@@ -305,8 +305,9 @@ void change_webcam_frame_to_file(struct healthbar_sensor_webcam_frame *sensor,
 	}
 }
 
-void render_game_capture(struct healthbar_sensor_webcam_frame *sensor) 
+bool render_game_capture(struct healthbar_sensor_webcam_frame *sensor) 
 {
+	bool success = false;
 	obs_enter_graphics();
 
 	gs_texrender_reset(sensor->texrender);
@@ -322,7 +323,10 @@ void render_game_capture(struct healthbar_sensor_webcam_frame *sensor)
 			(float) sensor->height, -100.0f, 100.0f);
 
 		
-		obs_source_video_render(sensor->game_capture_source);
+		if (obs_source_active(sensor->game_capture_source)) {
+			obs_source_video_render(sensor->game_capture_source);
+			success = true;
+		}
 		gs_texrender_end(sensor->texrender);
 	}
 
@@ -331,7 +335,7 @@ void render_game_capture(struct healthbar_sensor_webcam_frame *sensor)
 	gs_effect_t *effect2 = obs_get_base_effect(OBS_EFFECT_DEFAULT);
 	gs_texture_t *tex = gs_texrender_get_texture(sensor->texrender);
 
-	if (tex) {
+	if (tex && obs_source_active(sensor->game_capture_source)) {
 		gs_stage_texture(sensor->staging_texture, tex);
 
 		uint8_t *data;
@@ -348,9 +352,12 @@ void render_game_capture(struct healthbar_sensor_webcam_frame *sensor)
 
 		while (gs_effect_loop(effect2, "Draw"))
 			gs_draw_sprite(tex, 0, sensor->width, sensor->height);
+	} else {
+		success = false;
 	}
 
 	obs_leave_graphics();
+	return success;
 }
 
 bool send_data_to_api(struct healthbar_sensor_webcam_frame *sensor) 
@@ -452,15 +459,11 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 	blog(LOG_INFO, "HSWF - semaphore: Entered...");
 
 	bool success = false;
-	blog(LOG_INFO, "HSWF - sem 1");
 
 	if (obs_source_active(my_sensor->game_capture_source) &&
-				my_sensor->width > 10 && my_sensor->height > 10) {
-		blog(LOG_INFO, "HSWF - sem 2");
-		render_game_capture(my_sensor);
-		blog(LOG_INFO, "HSWF - sem 3");
+				my_sensor->width > 10 && my_sensor->height > 10 &&
+				render_game_capture(my_sensor)) {
 		success = send_data_to_api(my_sensor);
-		blog(LOG_INFO, "HSWF - sem 4");
 	} else {
 		if (my_sensor->current_frame != 0) {
 			change_webcam_frame_to_file(my_sensor, my_sensor->no_lifebar_frame_path);

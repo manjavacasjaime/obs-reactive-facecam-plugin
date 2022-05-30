@@ -24,7 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <media-playback/media.h>
 #include <obs-frontend-api.h>
 #include <curl/curl.h>
-#include <unistd.h>
+#include <windows.h>
 #include <pthread.h>
 #include <semaphore.h>
 
@@ -476,7 +476,10 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 		check_for_game_capture_source(my_sensor);
 	}
 
-	int sleep_time = success ? 1 : 4;
+	//if playing valorant success_sleep_time = bla
+	//otherwise: 1000
+	int success_sleep_time = 500;
+	int sleep_time = success ? success_sleep_time : 4000;
 
 	if (success) {
 		char *ptr;
@@ -520,7 +523,7 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
       
     if (!my_sensor->is_on_destroy) {
 		my_sensor->is_on_sleep = true;
-		sleep(sleep_time);
+		Sleep(sleep_time);
 		my_sensor->is_on_sleep = false;
 	}
 	//signal

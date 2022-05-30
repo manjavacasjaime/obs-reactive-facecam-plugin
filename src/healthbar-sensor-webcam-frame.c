@@ -509,7 +509,7 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 			} else if (my_sensor->current_frame != 0) {
 				my_sensor->no_lifebar_found_counter++;
 
-				if (my_sensor->no_lifebar_found_counter > 10) {
+				if (my_sensor->no_lifebar_found_counter > 8) {
 					change_webcam_frame_to_file(my_sensor, my_sensor->no_lifebar_frame_path);
 					my_sensor->current_frame = 0;
 					my_sensor->no_lifebar_found_counter = 0;

@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <pthread.h>
 #include <semaphore.h>
 
-#define API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/apex/fullhd"
+#define API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/valorant/fullhd"
 
 #define NO_LIFEBAR_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
 #define HIGH_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco01.webm"
@@ -53,6 +53,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define POCAVIDADUOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/pocaVidaDuos.png"
 #define POCAVIDATRIOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/pocaVidaTrios.png"
 #define REANIMANDOTRIOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/reanimandoTrios.png"
+
+#define V_RAWIMAGE (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/valoTest/raw_image"
 
 
 struct json_object *parsed_json;
@@ -507,7 +509,7 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 			} else if (my_sensor->current_frame != 0) {
 				my_sensor->no_lifebar_found_counter++;
 
-				if (my_sensor->no_lifebar_found_counter > 6) {
+				if (my_sensor->no_lifebar_found_counter > 8) {
 					change_webcam_frame_to_file(my_sensor, my_sensor->no_lifebar_frame_path);
 					my_sensor->current_frame = 0;
 					my_sensor->no_lifebar_found_counter = 0;

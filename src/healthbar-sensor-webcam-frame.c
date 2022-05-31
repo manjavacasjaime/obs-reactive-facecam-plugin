@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <pthread.h>
 #include <semaphore.h>
 
-#define API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/valorant/fullhd"
+#define API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/apex/fullhd"
 
 #define NO_LIFEBAR_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
 #define HIGH_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco01.webm"
@@ -476,9 +476,9 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 		check_for_game_capture_source(my_sensor);
 	}
 
-	//if playing valorant success_sleep_time = bla
-	//otherwise: 1000
-	int success_sleep_time = 500;
+	//if playing valorant success_sleep_time = 500
+	//otherwise: 700
+	int success_sleep_time = 700;
 	int sleep_time = success ? success_sleep_time : 4000;
 
 	if (success) {

@@ -478,7 +478,7 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 
 	//if playing valorant success_sleep_time = bla
 	//otherwise: 1000
-	int success_sleep_time = 600;
+	int success_sleep_time = 500;
 	int sleep_time = success ? success_sleep_time : 4000;
 
 	if (success) {

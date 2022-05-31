@@ -28,8 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <pthread.h>
 #include <semaphore.h>
 
+#define VALORANT_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/valorant/fullhd"
 #define APEX_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/apex/fullhd"
-#define VALORANT_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/apex/fullhd"
 
 #define NO_LIFEBAR_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
 #define HIGH_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco01.webm"
@@ -47,6 +47,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define V_RAWIMAGE (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/valoTest/raw_image"
 #define RAWSCREENSHOT (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/raw_screenshot"
+
+#define SETTING_GAME_VALORANT 0
+#define SETTING_GAME_APEX 1
 
 
 struct json_object *parsed_json;
@@ -82,6 +85,7 @@ struct healthbar_sensor_webcam_frame {
 	bool is_on_destroy;
 	bool is_on_sleep;
 	
+	int game;
 	obs_scene_t *current_scene;
 	char *game_capture_source_name;
 	obs_source_t *game_capture_source;
@@ -374,7 +378,10 @@ bool send_data_to_api(struct healthbar_sensor_webcam_frame *sensor)
 	sensor->curl = curl_easy_init();
 
 	if (sensor->curl) {
-		curl_easy_setopt(sensor->curl, CURLOPT_URL, API_URL);
+		const char *api_url =
+			sensor->game == SETTING_GAME_VALORANT ? VALORANT_API_URL : APEX_API_URL;
+
+		curl_easy_setopt(sensor->curl, CURLOPT_URL, api_url);
 		curl_easy_setopt(sensor->curl, CURLOPT_UPLOAD, 1L);
 		curl_easy_setopt(sensor->curl, CURLOPT_READFUNCTION, read_callback);
 		curl_easy_setopt(sensor->curl, CURLOPT_READDATA, fd);
@@ -468,9 +475,8 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 		check_for_game_capture_source(my_sensor);
 	}
 
-	//if playing valorant success_sleep_time = 500
-	//otherwise: 700
-	int success_sleep_time = 700;
+	int success_sleep_time =
+			my_sensor->game == SETTING_GAME_VALORANT ? 500 : 700;
 	int sleep_time = success ? success_sleep_time : 4000;
 
 	if (success) {
@@ -529,6 +535,7 @@ static void hswf_update(void *data, obs_data_t *settings)
 
 	struct healthbar_sensor_webcam_frame *sensor = data;
 
+	int game = obs_data_get_int(settings, "game");
 	const char *game_capture_source_name =
 			obs_data_get_string(settings, "game_capture_source_name");
 	const char *no_lifebar_frame_path =
@@ -539,6 +546,8 @@ static void hswf_update(void *data, obs_data_t *settings)
 			obs_data_get_string(settings, "medium_health_frame_path");
 	const char *low_health_frame_path =
 			obs_data_get_string(settings, "low_health_frame_path");
+
+	sensor->game = game;
 
 	if (sensor->game_capture_source_name)
 		bfree(sensor->game_capture_source_name);
@@ -814,8 +823,13 @@ static obs_properties_t *hswf_properties(void *data)
 {
 	obs_properties_t *props = obs_properties_create();
 
+	obs_property_t *p = obs_properties_add_list(props,
+		"game", "Game", OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_INT);
+	obs_property_list_add_int(p, "Valorant", SETTING_GAME_VALORANT);
+	obs_property_list_add_int(p, "Apex Legends", SETTING_GAME_APEX);
+
 	obs_properties_add_text(props, "game_capture_source_name",
-			"Name of source where lifebar is found", OBS_TEXT_DEFAULT);
+			"Name of source where game is found", OBS_TEXT_DEFAULT);
 	obs_properties_add_path(props, "no_lifebar_frame_path",
 			"Webcam frame to show when no lifebar is found",
 			OBS_PATH_FILE, video_filter, NO_LIFEBAR_DEFAULT_FRAME);
@@ -835,6 +849,7 @@ static obs_properties_t *hswf_properties(void *data)
 
 static void hswf_defaults(obs_data_t *settings)
 {
+	obs_data_set_default_int(settings, "game", SETTING_GAME_VALORANT);
 	obs_data_set_default_string(settings, "game_capture_source_name",
 			"Captura de juego");
 	obs_data_set_default_string(settings,

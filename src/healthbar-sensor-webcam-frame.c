@@ -28,22 +28,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <pthread.h>
 #include <semaphore.h>
 
-#define API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/apex/fullhd"
+#define APEX_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/apex/fullhd"
+#define VALORANT_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/apex/fullhd"
 
 #define NO_LIFEBAR_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
 #define HIGH_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco01.webm"
 #define MEDIUM_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco02.webm"
 #define LOW_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco03.webm"
-
-#define BUSCARJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/buscarJJ.png"
-#define CURANDOJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/curandoJJ.png"
-#define LEYENDASJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/leyendasJJ.png"
-#define LLENABLANCOJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/llenaBlancoJJ.png"
-#define LLENAJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/llenaJJ.png"
-#define LLENANEGROJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/llenaNegroJJ.png"
-#define POCAEMPTYJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/pocaEmptyJJ.png"
-#define POCAROJAJJ (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/pocaRojaJJ.png"
-#define RAWSCREENSHOT (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/raw_screenshot"
 
 #define CAYENDODUOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/cayendoDuos.png"
 #define CAYENDOTRIOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/cayendoTrios.png"
@@ -55,6 +46,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define REANIMANDOTRIOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/reanimandoTrios.png"
 
 #define V_RAWIMAGE (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/valoTest/raw_image"
+#define RAWSCREENSHOT (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/raw_screenshot"
 
 
 struct json_object *parsed_json;

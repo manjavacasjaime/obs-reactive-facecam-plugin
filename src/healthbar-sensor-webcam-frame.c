@@ -31,10 +31,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define VALORANT_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/valorant/fullhd"
 #define APEX_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/apex/fullhd"
 
-#define NO_LIFEBAR_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/GreenMarco.webm"
-#define HIGH_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco01.webm"
-#define MEDIUM_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco02.webm"
-#define LOW_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco03.webm"
+#define NO_LIFEBAR_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco-Default.webm"
+#define HIGH_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco-Verde.webm"
+#define MEDIUM_HIGH_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco-Amarillo.webm"
+#define MEDIUM_LOW_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco-Naranja.webm"
+#define LOW_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco-Rojo.webm"
+#define ZERO_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/Marco-Negro.webm"
 
 #define CAYENDODUOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/cayendoDuos.png"
 #define CAYENDOTRIOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/cayendoTrios.png"
@@ -75,11 +77,14 @@ struct healthbar_sensor_webcam_frame {
 	
 	char *no_lifebar_frame_path;
 	char *high_health_frame_path;
-	char *medium_health_frame_path;
+	char *medium_high_health_frame_path;
+	char *medium_low_health_frame_path;
 	char *low_health_frame_path;
+	char *zero_health_frame_path;
 
 	sem_t mutex;
-	//0 is default, 1 is green, 2 is orange and 3 is red
+	//0 is default, 1 is green, 2 is yellow,
+	//3 is orange, 4 is red and 4 is black
 	int current_frame;
 	int no_lifebar_found_counter;
 	bool is_on_destroy;
@@ -496,15 +501,21 @@ void *thread_take_screenshot_and_send_to_api(void *sensor)
 				if (my_sensor->no_lifebar_found_counter > 0)
 					my_sensor->no_lifebar_found_counter = 0;
 				
-				if (lifePerc > 0.66 && my_sensor->current_frame != 1) {
+				if (lifePerc > 0.75 && my_sensor->current_frame != 1) {
 					change_webcam_frame_to_file(my_sensor, my_sensor->high_health_frame_path);
 					my_sensor->current_frame = 1;
-				} else if (lifePerc > 0.33 && lifePerc <= 0.66 && my_sensor->current_frame != 2) {
-					change_webcam_frame_to_file(my_sensor, my_sensor->medium_health_frame_path);
+				} else if (lifePerc > 0.5 && lifePerc <= 0.75 && my_sensor->current_frame != 2) {
+					change_webcam_frame_to_file(my_sensor, my_sensor->medium_high_health_frame_path);
 					my_sensor->current_frame = 2;
-				} else if (lifePerc <= 0.33 && my_sensor->current_frame != 3) {
-					change_webcam_frame_to_file(my_sensor, my_sensor->low_health_frame_path);
+				} else if (lifePerc > 0.25 && lifePerc <= 0.5 && my_sensor->current_frame != 3) {
+					change_webcam_frame_to_file(my_sensor, my_sensor->medium_low_health_frame_path);
 					my_sensor->current_frame = 3;
+				} else if (lifePerc > 0 && lifePerc <= 0.25 && my_sensor->current_frame != 4) {
+					change_webcam_frame_to_file(my_sensor, my_sensor->low_health_frame_path);
+					my_sensor->current_frame = 4;
+				} else if (lifePerc == 0 && my_sensor->current_frame != 5) {
+					change_webcam_frame_to_file(my_sensor, my_sensor->zero_health_frame_path);
+					my_sensor->current_frame = 5;
 				}
 
 			} else if (my_sensor->current_frame != 0) {
@@ -542,10 +553,14 @@ static void hswf_update(void *data, obs_data_t *settings)
 			obs_data_get_string(settings, "no_lifebar_frame_path");
 	const char *high_health_frame_path =
 			obs_data_get_string(settings, "high_health_frame_path");
-	const char *medium_health_frame_path =
-			obs_data_get_string(settings, "medium_health_frame_path");
+	const char *medium_high_health_frame_path =
+			obs_data_get_string(settings, "medium_high_health_frame_path");
+	const char *medium_low_health_frame_path =
+			obs_data_get_string(settings, "medium_low_health_frame_path");
 	const char *low_health_frame_path =
 			obs_data_get_string(settings, "low_health_frame_path");
+	const char *zero_health_frame_path =
+			obs_data_get_string(settings, "zero_health_frame_path");
 
 	sensor->game = game;
 
@@ -567,13 +582,21 @@ static void hswf_update(void *data, obs_data_t *settings)
 		bfree(sensor->high_health_frame_path);
 	sensor->high_health_frame_path = bstrdup(high_health_frame_path);
 
-	if (sensor->medium_health_frame_path)
-		bfree(sensor->medium_health_frame_path);
-	sensor->medium_health_frame_path = bstrdup(medium_health_frame_path);
+	if (sensor->medium_high_health_frame_path)
+		bfree(sensor->medium_high_health_frame_path);
+	sensor->medium_high_health_frame_path = bstrdup(medium_high_health_frame_path);
+
+	if (sensor->medium_low_health_frame_path)
+		bfree(sensor->medium_low_health_frame_path);
+	sensor->medium_low_health_frame_path = bstrdup(medium_low_health_frame_path);
 
 	if (sensor->low_health_frame_path)
 		bfree(sensor->low_health_frame_path);
 	sensor->low_health_frame_path = bstrdup(low_health_frame_path);
+
+	if (sensor->zero_health_frame_path)
+		bfree(sensor->zero_health_frame_path);
+	sensor->zero_health_frame_path = bstrdup(zero_health_frame_path);
 
 	sensor->current_frame = 0;
 	sensor->no_lifebar_found_counter = 0;
@@ -671,10 +694,14 @@ static void hswf_destroy(void *data)
 		bfree(sensor->no_lifebar_frame_path);
 	if (sensor->high_health_frame_path)
 		bfree(sensor->high_health_frame_path);
-	if (sensor->medium_health_frame_path)
-		bfree(sensor->medium_health_frame_path);
+	if (sensor->medium_high_health_frame_path)
+		bfree(sensor->medium_high_health_frame_path);
+	if (sensor->medium_low_health_frame_path)
+		bfree(sensor->medium_low_health_frame_path);
 	if (sensor->low_health_frame_path)
 		bfree(sensor->low_health_frame_path);
+	if (sensor->zero_health_frame_path)
+		bfree(sensor->zero_health_frame_path);
 
 	if (sensor->curl)
 		curl_easy_cleanup(sensor->curl);
@@ -834,14 +861,20 @@ static obs_properties_t *hswf_properties(void *data)
 			"Webcam frame to show when no lifebar is found",
 			OBS_PATH_FILE, video_filter, NO_LIFEBAR_DEFAULT_FRAME);
 	obs_properties_add_path(props, "high_health_frame_path",
-			"Webcam frame to show when health is high",
+			"Webcam frame to show when health is 76-100%",
 			OBS_PATH_FILE, video_filter, HIGH_HEALTH_DEFAULT_FRAME);
-	obs_properties_add_path(props, "medium_health_frame_path",
-			"Webcam frame to show when health is medium",
-			OBS_PATH_FILE, video_filter, MEDIUM_HEALTH_DEFAULT_FRAME);
+	obs_properties_add_path(props, "medium_high_health_frame_path",
+			"Webcam frame to show when health is 51-75%",
+			OBS_PATH_FILE, video_filter, MEDIUM_HIGH_HEALTH_DEFAULT_FRAME);
+	obs_properties_add_path(props, "medium_low_health_frame_path",
+			"Webcam frame to show when health is 26-50%",
+			OBS_PATH_FILE, video_filter, MEDIUM_LOW_HEALTH_DEFAULT_FRAME);
 	obs_properties_add_path(props, "low_health_frame_path",
-			"Webcam frame to show when health is low",
+			"Webcam frame to show when health is 1-25%",
 			OBS_PATH_FILE, video_filter, LOW_HEALTH_DEFAULT_FRAME);
+	obs_properties_add_path(props, "zero_health_frame_path",
+			"Webcam frame to show when health is 0%",
+			OBS_PATH_FILE, video_filter, ZERO_HEALTH_DEFAULT_FRAME);
 
 	UNUSED_PARAMETER(data);
 	return props;
@@ -857,9 +890,13 @@ static void hswf_defaults(obs_data_t *settings)
 	obs_data_set_default_string(settings,
 			"high_health_frame_path", HIGH_HEALTH_DEFAULT_FRAME);
 	obs_data_set_default_string(settings,
-			"medium_health_frame_path", MEDIUM_HEALTH_DEFAULT_FRAME);
+			"medium_high_health_frame_path", MEDIUM_HIGH_HEALTH_DEFAULT_FRAME);
+	obs_data_set_default_string(settings,
+			"medium_low_health_frame_path", MEDIUM_LOW_HEALTH_DEFAULT_FRAME);
 	obs_data_set_default_string(settings,
 			"low_health_frame_path", LOW_HEALTH_DEFAULT_FRAME);
+	obs_data_set_default_string(settings,
+			"zero_health_frame_path", ZERO_HEALTH_DEFAULT_FRAME);
 }
 
 

@@ -47,6 +47,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define POCAVIDATRIOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/pocaVidaTrios.png"
 #define REANIMANDOTRIOS (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/newTest/reanimandoTrios.png"
 
+#define C_VALOFULLVIDA (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/charlieTest/charlieValoFullVida.png"
+#define C_VALOPOCAVIDA (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/charlieTest/charlieValoPocaVida.png"
+#define C_APEXFULLVIDA (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/charlieTest/charlieApexFullVida.png"
+#define C_APEXPOCAVIDA (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/charlieTest/charlieApexPocaVida.png"
+
 #define V_RAWIMAGE (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/valoTest/raw_image"
 #define RAWSCREENSHOT (char *)"../../data/obs-plugins/obs-healthbar-sensor-webcam-frame/frames/test/raw_screenshot"
 

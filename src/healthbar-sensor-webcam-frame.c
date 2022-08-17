@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <windows.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <errno.h>
 
 #define VALORANT_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/valorant/fullhd"
 #define APEX_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/apex/fullhd"
@@ -374,16 +375,26 @@ bool send_data_to_api(struct healthbar_sensor_webcam_frame *sensor)
 	uint8_t *data = bzalloc(sensor->linesize * sensor->height);
 	memcpy(data, sensor->data, sensor->linesize * sensor->height);
 
+	errno = 0;
+
 	FILE *of = fopen(RAWSCREENSHOT, "wb");
 	if (of != NULL) {
 		fwrite(data, 1, sensor->linesize * sensor->height, of);
-		fclose(of);
+		blog(LOG_INFO, "HSWF - FOPEN WRITE success");
+	} else {
+		blog(LOG_INFO, "HSWF - FOPEN WRITE returns NULL: %d", errno);
 	}
 
+	fclose(of);
 	bfree(data);
 
 	FILE *fd;
   	fd = fopen(RAWSCREENSHOT, "rb");
+	if (fd != NULL) {
+		blog(LOG_INFO, "HSWF - FOPEN READ success");
+	} else {
+		blog(LOG_INFO, "HSWF - FOPEN READ returns NULL");
+	}
 	
 	sensor->curl = curl_easy_init();
 

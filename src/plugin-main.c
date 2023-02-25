@@ -24,11 +24,11 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 OBS_DECLARE_MODULE()
 OBS_MODULE_USE_DEFAULT_LOCALE(PLUGIN_NAME, "en-US")
 
-extern struct obs_source_info healthbar_sensor_webcam_frame;
+extern struct obs_source_info reactive_facecam_plugin;
 
 bool obs_module_load(void)
 {
-    obs_register_source(&healthbar_sensor_webcam_frame);
+    obs_register_source(&reactive_facecam_plugin);
     blog(LOG_INFO, "plugin loaded successfully (version %s)", PLUGIN_VERSION);
     return true;
 }
@@ -40,5 +40,5 @@ void obs_module_unload()
 
 const char* obs_module_description()
 {
-	return "Webcam frame that changes depending on your health bar status.";
+	return "Facecam frame that changes depending on your health bar status.";
 }

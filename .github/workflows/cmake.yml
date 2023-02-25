@@ -86,4 +86,4 @@ jobs:
       uses: actions/upload-artifact@v2.2.4
       with:
         name: linux-build
-        path: ./package/obs-healthbar-sensor-webcam-frame_0-1_amd64.deb
+        path: ./package/obs-reactive-facecam-plugin_0-1_amd64.deb

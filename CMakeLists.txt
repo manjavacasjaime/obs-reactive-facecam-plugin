@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(obs-healthbar-sensor-webcam-frame VERSION 1.0.0)
+project(obs-reactive-facecam-plugin VERSION 1.0.0)
 
 set(PLUGIN_AUTHOR "Jaime Manjavacas and Matthaios Patiño")
 
@@ -41,7 +41,7 @@ configure_file(
 
 set(PLUGIN_SOURCES
     src/plugin-main.c
-    src/healthbar-sensor-webcam-frame.c
+    src/reactive-facecam-plugin.c
     media-playback/decode.c
     media-playback/media.c
 )

@@ -42,12 +42,15 @@ configure_file(
 set(PLUGIN_SOURCES
     src/plugin-main.c
     src/reactive-facecam-plugin.c
+    src/video-player/video-player.c
     media-playback/decode.c
     media-playback/media.c
 )
 
 set(PLUGIN_HEADERS
     src/plugin-macros.generated.h
+    src/defs.h
+    src/video-player/video-player.h
     media-playback/closest-format.h
     media-playback/decode.h
     media-playback/media.h

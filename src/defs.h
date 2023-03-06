@@ -15,6 +15,10 @@ struct reactive_facecam_plugin {
 	uint32_t width;
 	uint32_t height;
 
+	sem_t mutex;
+	bool is_on_destroy;
+	bool is_on_sleep;
+
 	/*video-player variables*/
 
 	mp_media_t media;
@@ -38,20 +42,21 @@ struct reactive_facecam_plugin {
 	//3 is medium_low, 4 is low and 5 is zero_health
 	int current_frame;
 
+	/*game-capture variables*/
+
 	uint8_t *data;
 	uint32_t linesize;
-
 	gs_texrender_t *texrender;
 	gs_stagesurf_t *staging_texture;
 
-	sem_t mutex;
-	int no_lifebar_found_counter;
-	bool is_on_destroy;
-	bool is_on_sleep;
-	
-	int game;
 	obs_scene_t *current_scene;
 	char *game_capture_source_name;
 	obs_source_t *game_capture_source;
+
+	/*api-communication variables*/
+	
+	int game;
 	CURL *curl;
+
+	int no_lifebar_found_counter;
 };

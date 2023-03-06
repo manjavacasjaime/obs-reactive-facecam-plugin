@@ -44,6 +44,7 @@ set(PLUGIN_SOURCES
     src/reactive-facecam-plugin.c
     src/video-player/video-player.c
     src/game-capture/game-capture.c
+    src/api-communication/api-communication.c
     media-playback/decode.c
     media-playback/media.c
 )
@@ -53,6 +54,7 @@ set(PLUGIN_HEADERS
     src/defs.h
     src/video-player/video-player.h
     src/game-capture/game-capture.h
+    src/api-communication/api-communication.h
     media-playback/closest-format.h
     media-playback/decode.h
     media-playback/media.h

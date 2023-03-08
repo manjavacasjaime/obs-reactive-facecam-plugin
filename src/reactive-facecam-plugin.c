@@ -29,21 +29,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define LOW_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/Marco-Rojo.webm"
 #define ZERO_HEALTH_DEFAULT_FRAME (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/Marco-Negro.webm"
 
-#define CAYENDODUOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/newTest/cayendoDuos.png"
-#define CAYENDOTRIOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/newTest/cayendoTrios.png"
-#define CURANDOTRIOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/newTest/curandoTrios.png"
-#define ESCUDODUOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/newTest/escudoDuos.png"
-#define ESCUDOTRIOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/newTest/escudoTrios.png"
-#define POCAVIDADUOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/newTest/pocaVidaDuos.png"
-#define POCAVIDATRIOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/newTest/pocaVidaTrios.png"
-#define REANIMANDOTRIOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/newTest/reanimandoTrios.png"
-
-#define C_VALOFULLVIDA (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/charlieTest/charlieValoFullVida.png"
-#define C_VALOPOCAVIDA (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/charlieTest/charlieValoPocaVida.png"
-#define C_APEXFULLVIDA (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/charlieTest/charlieApexFullVida.png"
-#define C_APEXPOCAVIDA (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/charlieTest/charlieApexPocaVida.png"
-
-#define V_RAWIMAGE (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/valoTest/raw_image"
+#define CAYENDODUOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/testImages/cayendoDuos.png"
+#define CAYENDOTRIOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/testImages/cayendoTrios.png"
+#define CURANDOTRIOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/testImages/curandoTrios.png"
+#define ESCUDODUOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/testImages/escudoDuos.png"
+#define ESCUDOTRIOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/testImages/escudoTrios.png"
+#define POCAVIDADUOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/testImages/pocaVidaDuos.png"
+#define POCAVIDATRIOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/testImages/pocaVidaTrios.png"
+#define REANIMANDOTRIOS (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/testImages/reanimandoTrios.png"
 
 
 void *thread_take_screenshot_and_send_to_api(void *plugin)

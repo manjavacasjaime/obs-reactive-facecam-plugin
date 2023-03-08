@@ -1,4 +1,4 @@
-#define RAWSCREENSHOT (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/test/raw_screenshot"
+#define RAWSCREENSHOT (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/apiFiles-DO_NOT_DELETE/raw_screenshot"
 
 #define VALORANT_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/valorant/fullhd"
 #define APEX_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/apex/fullhd"

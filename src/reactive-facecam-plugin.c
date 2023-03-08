@@ -17,18 +17,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *****************************************************************************/
 
-#include <obs-module.h>
-#include <obs-source.h>
-#include <obs.h>
-#include <util/platform.h>
-#include <media-playback/media.h>
-#include <obs-frontend-api.h>
-#include <curl/curl.h>
-#include <windows.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <errno.h>
-
 #include <src/defs.h>
 #include <src/video-player/video-player.h>
 #include <src/game-capture/game-capture.h>

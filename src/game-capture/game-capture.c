@@ -1,15 +1,3 @@
-#include <obs-module.h>
-#include <obs-source.h>
-#include <obs.h>
-#include <util/platform.h>
-#include <media-playback/media.h>
-#include <obs-frontend-api.h>
-#include <curl/curl.h>
-#include <windows.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <errno.h>
-
 #include <src/defs.h>
 #include <src/game-capture/game-capture.h>
 

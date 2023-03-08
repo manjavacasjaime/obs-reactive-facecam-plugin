@@ -1,15 +1,3 @@
-#include <obs-module.h>
-#include <obs-source.h>
-#include <obs.h>
-#include <util/platform.h>
-#include <media-playback/media.h>
-#include <obs-frontend-api.h>
-#include <curl/curl.h>
-#include <windows.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <errno.h>
-
 #define RAWSCREENSHOT (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/test/raw_screenshot"
 
 #define VALORANT_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/valorant/fullhd"

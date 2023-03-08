@@ -1,15 +1,3 @@
-#include <obs-module.h>
-#include <obs-source.h>
-#include <obs.h>
-#include <util/platform.h>
-#include <media-playback/media.h>
-#include <obs-frontend-api.h>
-#include <curl/curl.h>
-#include <windows.h>
-#include <pthread.h>
-#include <semaphore.h>
-#include <errno.h>
-
 void rfp_restart_hotkey(void *data, obs_hotkey_id id, obs_hotkey_t *hotkey,
 			   bool pressed);
 bool rfp_play_hotkey(void *data, obs_hotkey_pair_id id,

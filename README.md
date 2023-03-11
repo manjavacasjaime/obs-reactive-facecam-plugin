@@ -5,9 +5,11 @@ OBS plugin that provides a fancy facecam frame which changes depending on your h
 Right now, Reactive Facecam Plugin only works with Valorant and Apex Legends, but please feel free to escalate it to other games.
 Note that the plugin depends on [healthbar-reader-service](https://github.com/manjavacasjaime/healthbar-reader-service) API, so check the API's page in order to know if it is up or down.
 
-This project has been coded using mooware's [OBS-Studio-Flash-Filter](https://github.com/puri-puri/OBS-Studio-Flash-Filter) as a reference.
+This project has been coded using mooware's [OBS-Studio-Flash-Filter](https://github.com/mooware/OBS-Studio-Flash-Filter) as a reference.
 
 ### Sample video (click to view on Youtube)
+
+API processing appears on this video just for demonstration purposes, but it won't appear on your OBS Scene.
 
 [![Youtube video: OBS Reactive Facecam Plugin sample](https://img.youtube.com/vi/Hx1ezYTnC2Q/0.jpg)](https://www.youtube.com/watch?v=Hx1ezYTnC2Q)
 
@@ -26,6 +28,7 @@ Inside *obs-reactive-facecam-plugin/data/obs-plugins/obs-reactive-facecam-plugin
 Please make sure to download and build OBS from its source code as it's explained [here](https://obsproject.com/wiki/install-instructions). This step has to be done before specifying this plugin's CMake variables.
 
 Once you have downloaded Reactive Facecam Plugin's source code, you'll need to build it using CMake in order to generate its binaries.
+
 CMake variables that need to be specified:
 
 | Name                  | Value                                                                           |

@@ -55,6 +55,7 @@ struct reactive_facecam_plugin {
 
 	/*api-communication variables*/
 	
+	//0 is Valorant, 1 is Apex
 	int game;
 	CURL *curl;
 

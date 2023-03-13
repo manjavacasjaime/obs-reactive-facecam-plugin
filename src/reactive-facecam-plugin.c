@@ -18,6 +18,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *****************************************************************************/
 
+/*
+OBS Reactive Facecam Plugin relies on 3 modules: video-player,
+game-capture and api-communication.
+Their behaviour is simple: every X seconds plugin takes a screenshot of
+the player's Game Capture Source. This screenshot is sent to an API in order
+to read the health bar status from the image. Once the API answers with the
+player's health bar status, this plugin will set a facecam according to it.
+*/
+
 #include <src/defs.h>
 #include <src/video-player/video-player.h>
 #include <src/game-capture/game-capture.h>

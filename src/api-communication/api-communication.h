@@ -1,3 +1,9 @@
+/*
+This module is responsible for sending the Game Capture Source screenshot to an API.
+The API's response will be the player's health bar status and the facecam will
+change according to it.
+*/
+
 #define RAWSCREENSHOT (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/apiFiles-DO_NOT_DELETE/raw_screenshot"
 
 #define VALORANT_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/valorant/fullhd"

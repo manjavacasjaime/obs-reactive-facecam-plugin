@@ -1,3 +1,7 @@
+/*
+This module takes care of showing the facecam on the OBS Scene.
+*/
+
 void rfp_restart_hotkey(void *data, obs_hotkey_id id, obs_hotkey_t *hotkey,
 			   bool pressed);
 bool rfp_play_hotkey(void *data, obs_hotkey_pair_id id,

@@ -63,8 +63,6 @@ set(PLUGIN_HEADERS
 # --- Platform-independent build settings ---
 add_library(${CMAKE_PROJECT_NAME} MODULE ${PLUGIN_SOURCES} ${PLUGIN_HEADERS})
 
-#find_path(MEDIA_PLAYBACK_DIR NAMES media.h)
-
 include_directories(
     ${LIBOBS_INCLUDE_DIR}
     ${FFMPEG_INCLUDE_DIRS}
@@ -73,7 +71,6 @@ include_directories(
     ${JSON_C_INCLUDE_DIR}
     #${MEDIA_PLAYBACK_DIR}
 )
-#add_subdirectory(${MEDIA_PLAYBACK_DIR} "${CMAKE_CURRENT_BINARY_DIR}/media-playback")
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
     ${LIBOBS_LIB}

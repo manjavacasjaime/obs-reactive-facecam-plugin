@@ -1,7 +1,7 @@
 #define MyAppName "@CMAKE_PROJECT_NAME@"
 #define MyAppVersion "@CMAKE_PROJECT_VERSION@"
 #define MyAppPublisher "@PLUGIN_AUTHOR@"
-#define MyAppURL "https://github.com/mooware/OBS-Studio-Flash-Filter"
+#define MyAppURL "https://github.com/manjavacasjaime/obs-reactive-facecam-plugin"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.

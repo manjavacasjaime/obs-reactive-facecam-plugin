@@ -1,4 +1,5 @@
 /*****************************************************************************
+Copyright (C) 2022 manjavacasjaime <jaimezombis@gmail.com>
 Copyright (C) 2017 by Eric Rasmuson <erasmuson@gmail.com>
 
 This file is part of OBS.
@@ -405,9 +406,6 @@ static void rfp_defaults(obs_data_t *settings)
 }
 
 
-//.output_flags = OBS_SOURCE_ASYNC_VIDEO,
-//solo este flag hace que se crashee a veces
-//quizas es porque necesita los hotkey methods
 struct obs_source_info reactive_facecam_plugin = {
 	.id = "reactive_facecam_plugin",
 	.type = OBS_SOURCE_TYPE_INPUT,

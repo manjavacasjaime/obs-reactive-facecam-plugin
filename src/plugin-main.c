@@ -1,5 +1,6 @@
 /*
-OBS Screen Flash Filter
+OBS Reactive Facecam Plugin
+Copyright (C) 2022 manjavacasjaime <jaimezombis@gmail.com>
 Copyright (C) 2021 mooware <dev@mooware.at>
 Copyright (C) 2017 by Eric Rasmuson <erasmuson@gmail.com>
 

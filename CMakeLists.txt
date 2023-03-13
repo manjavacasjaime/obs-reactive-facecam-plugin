@@ -69,7 +69,6 @@ include_directories(
     "${LIBOBS_INCLUDE_DIR}/../UI/obs-frontend-api"
     ${CURL_INCLUDE_DIR}
     ${JSON_C_INCLUDE_DIR}
-    #${MEDIA_PLAYBACK_DIR}
 )
 
 target_link_libraries(${CMAKE_PROJECT_NAME}

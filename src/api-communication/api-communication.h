@@ -6,8 +6,8 @@ change according to it.
 
 #define RAWSCREENSHOT (char *)"../../data/obs-plugins/obs-reactive-facecam-plugin/frames/apiFiles-DO_NOT_DELETE/raw_screenshot"
 
-#define VALORANT_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/valorant/fullhd"
-#define APEX_API_URL (char *)"http://127.0.0.1:8080/healthbar-reader-service/apex/fullhd"
+#define VALORANT_API_URL (char *)"http://35.88.255.132/healthbar-reader-service/valorant/fullhd"
+#define APEX_API_URL (char *)"http://35.88.255.132/healthbar-reader-service/apex/fullhd"
 #define SETTING_GAME_VALORANT 0
 #define SETTING_GAME_APEX 1
 
